@@ -34,6 +34,7 @@ async function main() {
       slug: "star-wars",
       description:
         "The original Star Wars trilogy — a space opera following the Rebel Alliance's struggle against the Galactic Empire, and Luke Skywalker's journey from farm boy to Jedi Knight.",
+      visibility: "PUBLIC",
       ownerId: user.id,
     },
   });
