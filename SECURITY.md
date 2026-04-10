@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Loreum, please report it responsibly using [GitHub Security Advisories](https://github.com/your-org/loreum/security/advisories/new).
+If you discover a security vulnerability in Loreum, please report it responsibly using [GitHub Security Advisories](https://github.com/loreum-app/loreum/security/advisories/new).
 
 **Do NOT open a public issue for security vulnerabilities.**
 

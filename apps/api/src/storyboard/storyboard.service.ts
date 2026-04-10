@@ -347,14 +347,6 @@ export class StoryboardService {
       if (plotline) plotlineId = plotline.id;
     }
 
-    let povCharacterId: string | undefined;
-    if (dto.povCharacterSlug) {
-      const pov = await this.prisma.entity.findFirst({
-        where: { projectId, slug: dto.povCharacterSlug },
-      });
-      if (pov) povCharacterId = pov.id;
-    }
-
     let locationId: string | undefined;
     if (dto.locationSlug) {
       const loc = await this.prisma.entity.findFirst({
@@ -363,18 +355,35 @@ export class StoryboardService {
       if (loc) locationId = loc.id;
     }
 
-    return this.prisma.scene.create({
+    // Resolve POV character slug to entity ID
+    let povEntityId: string | undefined;
+    if (dto.povCharacterSlug) {
+      const pov = await this.prisma.entity.findFirst({
+        where: { projectId, slug: dto.povCharacterSlug },
+      });
+      if (pov) povEntityId = pov.id;
+    }
+
+    const scene = await this.prisma.scene.create({
       data: {
         chapterId: dto.chapterId,
         sequenceNumber: dto.sequenceNumber,
         title: dto.title,
         description: dto.description,
         plotlineId,
-        povCharacterId,
         locationId,
         timelineEventId: dto.timelineEventId,
       },
     });
+
+    // Add POV character via the SceneCharacter join table
+    if (povEntityId) {
+      await this.prisma.sceneCharacter.create({
+        data: { sceneId: scene.id, entityId: povEntityId, isPov: true },
+      });
+    }
+
+    return scene;
   }
 
   async findScenesByChapter(projectId: string, chapterId: string) {
@@ -383,7 +392,9 @@ export class StoryboardService {
       orderBy: { sequenceNumber: "asc" },
       include: {
         plotline: { select: { id: true, name: true, slug: true } },
-        povCharacter: { select: { id: true, name: true, slug: true } },
+        characters: {
+          select: { entityId: true, role: true, isPov: true, entity: { select: { id: true, name: true, slug: true } } },
+        },
         location: { select: { id: true, name: true, slug: true } },
       },
     });
@@ -414,17 +425,6 @@ export class StoryboardService {
       }
     }
 
-    if (dto.povCharacterSlug !== undefined) {
-      if (dto.povCharacterSlug === null) {
-        data.povCharacterId = null;
-      } else {
-        const pov = await this.prisma.entity.findFirst({
-          where: { projectId, slug: dto.povCharacterSlug },
-        });
-        data.povCharacterId = pov?.id ?? null;
-      }
-    }
-
     if (dto.locationSlug !== undefined) {
       if (dto.locationSlug === null) {
         data.locationId = null;
@@ -436,15 +436,40 @@ export class StoryboardService {
       }
     }
 
-    return this.prisma.scene.update({
+    const updated = await this.prisma.scene.update({
       where: { id },
       data,
       include: {
         plotline: { select: { id: true, name: true, slug: true } },
-        povCharacter: { select: { id: true, name: true, slug: true } },
+        characters: {
+          select: { entityId: true, role: true, isPov: true, entity: { select: { id: true, name: true, slug: true } } },
+        },
         location: { select: { id: true, name: true, slug: true } },
       },
     });
+
+    // Update POV character via SceneCharacter join table
+    if (dto.povCharacterSlug !== undefined) {
+      // Remove existing POV
+      await this.prisma.sceneCharacter.deleteMany({
+        where: { sceneId: id, isPov: true },
+      });
+
+      if (dto.povCharacterSlug !== null) {
+        const pov = await this.prisma.entity.findFirst({
+          where: { projectId, slug: dto.povCharacterSlug },
+        });
+        if (pov) {
+          await this.prisma.sceneCharacter.upsert({
+            where: { sceneId_entityId: { sceneId: id, entityId: pov.id } },
+            create: { sceneId: id, entityId: pov.id, isPov: true },
+            update: { isPov: true },
+          });
+        }
+      }
+    }
+
+    return updated;
   }
 
   async deleteScene(projectId: string, id: string) {

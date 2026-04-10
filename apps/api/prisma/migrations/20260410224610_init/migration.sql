@@ -4,6 +4,18 @@ CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
 -- CreateEnum
 CREATE TYPE "EntityType" AS ENUM ('CHARACTER', 'LOCATION', 'ORGANIZATION', 'ITEM');
 
+-- CreateEnum
+CREATE TYPE "Visibility" AS ENUM ('PRIVATE', 'PUBLIC', 'UNLISTED');
+
+-- CreateEnum
+CREATE TYPE "ApiKeyPermission" AS ENUM ('READ_ONLY', 'READ_WRITE');
+
+-- CreateEnum
+CREATE TYPE "ChangeOperation" AS ENUM ('CREATE', 'UPDATE', 'DELETE');
+
+-- CreateEnum
+CREATE TYPE "ChangeStatus" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED');
+
 -- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
@@ -79,6 +91,7 @@ CREATE TABLE "projects" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
+    "visibility" "Visibility" NOT NULL DEFAULT 'PRIVATE',
     "ownerId" TEXT NOT NULL,
     "graphLayout" JSONB,
     "timelineMode" TEXT NOT NULL DEFAULT 'standard',
@@ -361,7 +374,6 @@ CREATE TABLE "scenes" (
     "description" TEXT,
     "content" TEXT,
     "plotlineId" TEXT,
-    "povCharacterId" TEXT,
     "locationId" TEXT,
     "timelineEventId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -375,6 +387,7 @@ CREATE TABLE "scene_characters" (
     "sceneId" TEXT NOT NULL,
     "entityId" TEXT NOT NULL,
     "role" TEXT,
+    "isPov" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "scene_characters_pkey" PRIMARY KEY ("sceneId","entityId")
 );
@@ -393,6 +406,40 @@ CREATE TABLE "maps" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "maps_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "api_keys" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "keyHash" TEXT NOT NULL,
+    "permissions" "ApiKeyPermission" NOT NULL DEFAULT 'READ_WRITE',
+    "lastUsedAt" TIMESTAMP(3),
+    "expiresAt" TIMESTAMP(3),
+    "revokedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "api_keys_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "pending_changes" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "apiKeyId" TEXT,
+    "batchId" TEXT NOT NULL,
+    "operation" "ChangeOperation" NOT NULL,
+    "targetModel" TEXT NOT NULL,
+    "targetId" TEXT,
+    "proposedData" JSONB NOT NULL DEFAULT '{}',
+    "previousData" JSONB,
+    "status" "ChangeStatus" NOT NULL DEFAULT 'PENDING',
+    "reviewedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "pending_changes_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -495,6 +542,18 @@ CREATE INDEX "scenes_chapterId_sequenceNumber_idx" ON "scenes"("chapterId", "seq
 
 -- CreateIndex
 CREATE UNIQUE INDEX "maps_projectId_slug_key" ON "maps"("projectId", "slug");
+
+-- CreateIndex
+CREATE INDEX "api_keys_projectId_idx" ON "api_keys"("projectId");
+
+-- CreateIndex
+CREATE INDEX "api_keys_keyHash_idx" ON "api_keys"("keyHash");
+
+-- CreateIndex
+CREATE INDEX "pending_changes_projectId_status_idx" ON "pending_changes"("projectId", "status");
+
+-- CreateIndex
+CREATE INDEX "pending_changes_batchId_idx" ON "pending_changes"("batchId");
 
 -- CreateIndex
 CREATE INDEX "notifications_userId_read_idx" ON "notifications"("userId", "read");
@@ -632,9 +691,6 @@ ALTER TABLE "scenes" ADD CONSTRAINT "scenes_chapterId_fkey" FOREIGN KEY ("chapte
 ALTER TABLE "scenes" ADD CONSTRAINT "scenes_plotlineId_fkey" FOREIGN KEY ("plotlineId") REFERENCES "plotlines"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "scenes" ADD CONSTRAINT "scenes_povCharacterId_fkey" FOREIGN KEY ("povCharacterId") REFERENCES "entities"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "scenes" ADD CONSTRAINT "scenes_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "entities"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -648,3 +704,12 @@ ALTER TABLE "scene_characters" ADD CONSTRAINT "scene_characters_entityId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "maps" ADD CONSTRAINT "maps_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "pending_changes" ADD CONSTRAINT "pending_changes_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "pending_changes" ADD CONSTRAINT "pending_changes_apiKeyId_fkey" FOREIGN KEY ("apiKeyId") REFERENCES "api_keys"("id") ON DELETE SET NULL ON UPDATE CASCADE;

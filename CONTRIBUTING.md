@@ -14,7 +14,7 @@ Thank you for your interest in contributing to Loreum! This guide covers everyth
 
 ```sh
 # Clone the repo
-git clone https://github.com/your-org/loreum.git
+git clone https://github.com/loreum-app/loreum.git
 cd loreum
 
 # Install dependencies

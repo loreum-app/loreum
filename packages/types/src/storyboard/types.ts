@@ -73,6 +73,13 @@ export interface Chapter {
   scenes?: SceneSummary[];
 }
 
+export interface SceneCharacterRef {
+  entityId: string;
+  role: string | null;
+  isPov: boolean;
+  entity: { id: string; name: string; slug: string };
+}
+
 export interface Scene {
   id: string;
   chapterId: string;
@@ -80,13 +87,12 @@ export interface Scene {
   sequenceNumber: number;
   description: string | null;
   plotlineId: string | null;
-  povCharacterId: string | null;
   locationId: string | null;
   timelineEventId: string | null;
   createdAt: string;
   updatedAt: string;
   plotline?: PlotlineSummary | null;
-  povCharacter?: { id: string; name: string; slug: string } | null;
+  characters?: SceneCharacterRef[];
   location?: { id: string; name: string; slug: string } | null;
 }
 
@@ -95,6 +101,6 @@ export interface SceneSummary {
   title: string | null;
   sequenceNumber: number;
   description: string | null;
-  povCharacter?: { id: string; name: string; slug: string } | null;
+  characters?: SceneCharacterRef[];
   location?: { id: string; name: string; slug: string } | null;
 }

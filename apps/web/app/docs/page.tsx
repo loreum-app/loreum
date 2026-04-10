@@ -6,7 +6,6 @@ import {
   BookOpen,
   Rocket,
   Bot,
-  Code,
   Globe,
   Users,
   Clock,
@@ -88,27 +87,31 @@ const aiIntegration = [
   {
     icon: Bot,
     title: "MCP Server",
-    description: "Connect AI assistants to your world. 11 read tools, 16 write tools.",
+    description:
+      "Connect AI assistants to your world. 11 read tools, 16 write tools.",
     href: "/docs/mcp",
   },
   {
     icon: Key,
     title: "API Keys",
-    description: "Generate project-scoped keys with read-only or read-write permissions.",
+    description:
+      "Generate project-scoped keys with read-only or read-write permissions.",
     href: "/docs/api-keys",
     status: "coming-soon",
   },
   {
     icon: GitPullRequest,
     title: "Review Queue",
-    description: "Inspect and approve AI-proposed changes before they touch your canon.",
+    description:
+      "Inspect and approve AI-proposed changes before they touch your canon.",
     href: "/docs/review-queue",
     status: "coming-soon",
   },
   {
     icon: PenTool,
     title: "Style Guide",
-    description: "Configure voice, tone, POV, pacing, and character voice notes for AI.",
+    description:
+      "Configure voice, tone, POV, pacing, and character voice notes for AI.",
     href: "/docs/style-guide",
     status: "coming-soon",
   },
@@ -167,9 +170,12 @@ export default function DocsPage() {
         <h2 className="mb-4 text-lg font-semibold">AI Integration</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {aiIntegration.map((item) => {
-            const isComingSoon = "status" in item && item.status === "coming-soon";
+            const isComingSoon =
+              "status" in item && item.status === "coming-soon";
             const content = (
-              <Card className={`transition-colors ${isComingSoon ? "relative opacity-60" : "hover:border-foreground/20"}`}>
+              <Card
+                className={`transition-colors ${isComingSoon ? "relative opacity-60" : "hover:border-foreground/20"}`}
+              >
                 {isComingSoon && (
                   <div className="absolute right-3 top-3 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                     Coming soon
@@ -183,7 +189,11 @@ export default function DocsPage() {
               </Card>
             );
             if (isComingSoon) return <div key={item.title}>{content}</div>;
-            return <Link key={item.title} href={item.href}>{content}</Link>;
+            return (
+              <Link key={item.title} href={item.href}>
+                {content}
+              </Link>
+            );
           })}
         </div>
       </section>

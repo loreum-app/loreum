@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@loreum/ui/button";
 import { Check, Circle, Clock } from "lucide-react";
 
@@ -70,22 +69,26 @@ const phases: RoadmapPhase[] = [
     items: [
       {
         title: "Style guide",
-        description: "Project-level voice, tone, POV, pacing, dialogue rules. Scene overrides and character voice notes.",
+        description:
+          "Project-level voice, tone, POV, pacing, dialogue rules. Scene overrides and character voice notes.",
         status: "in-progress",
       },
       {
         title: "API key authentication",
-        description: "Generate project-scoped API keys for MCP. Read-only or read-write permissions, expiration, revocation.",
+        description:
+          "Generate project-scoped API keys for MCP. Read-only or read-write permissions, expiration, revocation.",
         status: "planned",
       },
       {
         title: "Review queue (staging area)",
-        description: "AI-proposed changes land as pending. Diff view for updates, preview for creates, batch accept/reject.",
+        description:
+          "AI-proposed changes land as pending. Diff view for updates, preview for creates, batch accept/reject.",
         status: "planned",
       },
       {
         title: "Expanded MCP tools",
-        description: "Timeline, lore article, scene, plot point, and style guide tools for both read and write.",
+        description:
+          "Timeline, lore article, scene, plot point, and style guide tools for both read and write.",
         status: "planned",
       },
     ],
@@ -142,7 +145,8 @@ const phases: RoadmapPhase[] = [
       },
       {
         title: "Hosted AI conversation loop",
-        description: "In-app AI chat that queries your world data and writes in your style. Loreum handles the API calls.",
+        description:
+          "In-app AI chat that queries your world data and writes in your style. Loreum handles the API calls.",
         status: "planned",
       },
       {

@@ -1280,7 +1280,6 @@ Overconfidence. The Emperor's entire strategy depends on fear — and when the D
         title: "Binary Sunset",
         sequenceNumber: 1,
         plotlineId: lukeJourney.id,
-        povCharacterId: luke.id,
         locationId: tatooine.id,
         description:
           "Luke stares at the twin suns, yearning for something more. The Force theme swells. This is the moment the audience falls in love with him.",
@@ -1290,7 +1289,6 @@ Overconfidence. The Emperor's entire strategy depends on fear — and when the D
         title: "Leia's Message",
         sequenceNumber: 2,
         plotlineId: lukeJourney.id,
-        povCharacterId: luke.id,
         description: '"Help me, Obi-Wan Kenobi. You\'re my only hope."',
       },
       {
@@ -1314,7 +1312,6 @@ Overconfidence. The Emperor's entire strategy depends on fear — and when the D
         title: "Obi-Wan vs Vader",
         sequenceNumber: 2,
         plotlineId: vaderRedemptionPlotline.id,
-        povCharacterId: obiwan.id,
         description:
           'Obi-Wan faces Vader one last time. "If you strike me down, I shall become more powerful than you can possibly imagine." He sacrifices himself.',
       },
@@ -1323,10 +1320,25 @@ Overconfidence. The Emperor's entire strategy depends on fear — and when the D
         title: "The Trench Run",
         sequenceNumber: 1,
         plotlineId: lukeJourney.id,
-        povCharacterId: luke.id,
         description:
           'Luke flies into the Death Star trench. Vader is on his tail. Han returns at the last moment. "Use the Force, Luke." He fires. The Death Star explodes.',
       },
+    ],
+  });
+
+  // Add POV characters to scenes via SceneCharacter join table
+  const scenes = await prisma.scene.findMany({
+    where: { chapter: { work: { projectId: project.id } } },
+  });
+  const sceneByTitle = (title: string) =>
+    scenes.find((s) => s.title === title)!;
+
+  await prisma.sceneCharacter.createMany({
+    data: [
+      { sceneId: sceneByTitle("Binary Sunset").id, entityId: luke.id, isPov: true },
+      { sceneId: sceneByTitle("Leia's Message").id, entityId: luke.id, isPov: true },
+      { sceneId: sceneByTitle("Obi-Wan vs Vader").id, entityId: obiwan.id, isPov: true },
+      { sceneId: sceneByTitle("The Trench Run").id, entityId: luke.id, isPov: true },
     ],
   });
 

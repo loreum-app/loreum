@@ -27,13 +27,20 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+interface SceneCharacter {
+  entityId: string;
+  role: string | null;
+  isPov: boolean;
+  entity: { id: string; name: string; slug: string };
+}
+
 interface Scene {
   id: string;
   title: string | null;
   sequenceNumber: number;
   description: string | null;
   plotline: { id: string; name: string; slug: string } | null;
-  povCharacter: { id: string; name: string; slug: string } | null;
+  characters: SceneCharacter[];
   location: { id: string; name: string; slug: string } | null;
 }
 
@@ -290,7 +297,7 @@ export default function WorkDetailPage() {
     setEditSceneTitle(scene.title ?? "");
     setEditSceneDescription(scene.description ?? "");
     setEditScenePlotlineSlug(scene.plotline?.slug ?? "");
-    setEditScenePovSlug(scene.povCharacter?.slug ?? "");
+    setEditScenePovSlug(scene.characters?.find((c) => c.isPov)?.entity.slug ?? "");
     setEditSceneLocationSlug(scene.location?.slug ?? "");
   };
 
@@ -784,15 +791,16 @@ export default function WorkDetailPage() {
                                             {scene.plotline.name}
                                           </Link>
                                         )}
-                                        {scene.povCharacter && (
+                                        {scene.characters?.filter((c) => c.isPov).map((c) => (
                                           <Link
-                                            href={`/projects/${params.slug}/entities/characters/${scene.povCharacter.slug}`}
+                                            key={c.entityId}
+                                            href={`/projects/${params.slug}/entities/characters/${c.entity.slug}`}
                                             className="hover:underline"
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            POV: {scene.povCharacter.name}
+                                            POV: {c.entity.name}
                                           </Link>
-                                        )}
+                                        ))}
                                         {scene.location && (
                                           <Link
                                             href={`/projects/${params.slug}/entities/locations/${scene.location.slug}`}

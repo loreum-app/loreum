@@ -5,21 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardDescription } from "@loreum/ui/card";
-import {
-  Users,
-  MapPin,
-  Building2,
-  Network,
-  Clock,
-  ScrollText,
-} from "lucide-react";
-
-interface WikiStats {
-  entities: { type: string; _count: number }[];
-  relationships: number;
-  timelineEvents: number;
-  loreArticles: number;
-}
+import { Users, MapPin, Building2 } from "lucide-react";
 
 export default function WikiHomePage() {
   const params = useParams<{ slug: string }>();

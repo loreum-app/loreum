@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "../../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateEntityDto } from "./dto/create-entity.dto";
 import { UpdateEntityDto } from "./dto/update-entity.dto";
@@ -117,8 +118,8 @@ export class EntitiesService {
           data: {
             entityId: entity.id,
             itemTypeId: dto.item?.itemTypeId,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma JSON field
-            fields: (dto.item?.fields ?? {}) as any,
+  
+            fields: (dto.item?.fields ?? {}) as Prisma.InputJsonValue,
           },
         });
         break;
@@ -232,14 +233,14 @@ export class EntitiesService {
         create: {
           entityId: entity.id,
           itemTypeId: dto.item.itemTypeId,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma JSON field
-          fields: (dto.item.fields ?? {}) as any,
+
+          fields: (dto.item.fields ?? {}) as Prisma.InputJsonValue,
         },
         update: {
           itemTypeId: dto.item.itemTypeId,
            
           ...(dto.item.fields !== undefined
-            ? { fields: (dto.item.fields ?? {}) as any }
+            ? { fields: (dto.item.fields ?? {}) as Prisma.InputJsonValue }
             : {}),
         },
       });

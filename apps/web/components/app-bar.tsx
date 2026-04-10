@@ -11,7 +11,6 @@ import {
   Network,
   Clock,
   ScrollText,
-  Map,
   Layers,
   Globe,
   Bot,
