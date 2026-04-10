@@ -1,0 +1,108 @@
+@reference "tailwindcss";
+@reference "../app/globals.css";
+
+.markdown-content {
+  @apply max-w-none text-sm leading-relaxed;
+}
+
+/* Headings */
+.markdown-content h1 {
+  @apply scroll-m-20 mb-4 mt-8 first:mt-0;
+}
+
+.markdown-content h2 {
+  @apply scroll-m-20 mb-3 mt-6 first:mt-0;
+}
+
+.markdown-content h3 {
+  @apply scroll-m-20 mb-2 mt-5 first:mt-0;
+}
+
+.markdown-content h4 {
+  @apply scroll-m-20 mb-2 mt-4 first:mt-0;
+}
+
+.markdown-content h5 {
+  @apply scroll-m-20 text-base mb-2 mt-4 first:mt-0;
+}
+
+.markdown-content h6 {
+  @apply scroll-m-20 text-sm mb-2 mt-4 first:mt-0;
+}
+
+/* Paragraphs */
+.markdown-content p {
+  @apply leading-relaxed;
+}
+
+.markdown-content p:not(:last-child) {
+  @apply mb-4;
+}
+
+/* Lists */
+.markdown-content ul {
+  @apply mb-4 ml-6 list-disc;
+}
+
+.markdown-content ol {
+  @apply mb-4 ml-6 list-decimal;
+}
+
+.markdown-content li {
+  @apply mb-1;
+}
+
+/* Blockquotes */
+.markdown-content blockquote {
+  @apply mb-6 border-l-2 border-border pl-6 italic text-muted-foreground;
+}
+
+/* Horizontal Rules */
+.markdown-content hr {
+  @apply my-6 border-t border-border;
+}
+
+/* Code */
+.markdown-content code {
+  @apply relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold;
+}
+
+.markdown-content pre {
+  @apply mb-4 mt-6 overflow-x-auto rounded-lg border bg-muted p-4;
+}
+
+.markdown-content pre code {
+  @apply relative rounded-none bg-transparent p-0 text-sm font-normal;
+}
+
+/* Links */
+.markdown-content a {
+  @apply text-primary underline underline-offset-4 hover:text-primary/80;
+}
+
+/* Tables */
+.markdown-content table {
+  @apply mb-4 w-full border-collapse text-sm;
+}
+
+.markdown-content th {
+  @apply border border-border px-3 py-2 text-left font-semibold bg-muted;
+}
+
+.markdown-content td {
+  @apply border border-border px-3 py-2;
+}
+
+/* Images */
+.markdown-content img {
+  @apply my-4 rounded-lg;
+}
+
+/* Strong & Emphasis */
+.markdown-content strong {
+  @apply font-semibold;
+}
+
+.markdown-content em {
+  @apply italic;
+}

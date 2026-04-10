@@ -1,0 +1,695 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// AUTH & USERS
+// ============================================================================
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  username  String   @unique
+  avatarUrl String?
+  roles     Role[]   @default([USER])
+
+  lastActiveAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  profile     UserProfile?
+  preferences UserPreferences?
+
+  projects Project[]
+
+  @@index([email])
+  @@index([lastActiveAt])
+  @@map("users")
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  tokenFamily  String   @default(uuid())
+  lastTokenIat Int?
+  ipAddress    String?
+  userAgent    String?  @db.Text
+  lastActiveAt DateTime @default(now())
+  expiresAt    DateTime
+  isValid      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenFamily])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model UserProfile {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bio      String? @db.Text
+  location String?
+  website  String?
+  twitter  String?
+  isPublic Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
+model UserPreferences {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  emailNotifications Json   @default("{}")
+  inAppNotifications Json   @default("{}")
+  editorTheme        String @default("system")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+// ============================================================================
+// WORLD
+// ============================================================================
+
+enum EntityType {
+  CHARACTER
+  LOCATION
+  ORGANIZATION
+  ITEM
+}
+
+enum Visibility {
+  PRIVATE
+  PUBLIC
+  UNLISTED
+}
+
+model Project {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?    @db.Text
+  visibility  Visibility @default(PRIVATE)
+  ownerId     String
+  graphLayout Json?
+
+  timelineMode        String  @default("standard")
+  timelineStart       Float?
+  timelineEnd         Float?
+  timelineLabelPrefix String?
+  timelineLabelSuffix String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // World
+  entities       Entity[]
+  itemTypes      ItemType[]
+  relationships  Relationship[]
+  timelineEvents TimelineEvent[]
+  loreArticles   LoreArticle[]
+  tags           Tag[]
+  eras           Era[]
+  maps           Map[]
+
+  // Storyboard
+  plotlines Plotline[]
+  works     Work[]
+
+  // MCP
+  apiKeys        ApiKey[]
+  pendingChanges PendingChange[]
+
+  @@index([ownerId])
+  @@map("projects")
+}
+
+// ── Entity (base for all world objects) ──
+
+model Entity {
+  id          String     @id @default(cuid())
+  projectId   String
+  type        EntityType
+  name        String
+  slug        String
+  summary     String?    @db.Text
+  description String?    @db.Text
+  backstory   String?    @db.Text
+  secrets     String?    @db.Text
+  notes       String?    @db.Text
+  imageUrl    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 1:1 extension (one populated based on kind)
+  character    Character?
+  location     Location?
+  organization Organization?
+  item         Item?
+
+  // Shared relations
+  sourceRelationships   Relationship[] @relation("SourceEntity")
+  targetRelationships   Relationship[] @relation("TargetEntity")
+  timelineEventEntities TimelineEventEntity[]
+  loreArticleEntities   LoreArticleEntity[]
+  entityTags            EntityTag[]
+
+  // Storyboard
+  locationScenes    Scene[]          @relation("SceneLocation")
+  plotPoints        PlotPoint[]      @relation("PlotPointEntity")
+  plotPointLocations PlotPoint[]     @relation("PlotPointLocation")
+  sceneCharacters   SceneCharacter[]
+
+  searchVector Unsupported("tsvector")?
+
+  @@unique([projectId, slug])
+  @@index([projectId, type])
+  @@map("entities")
+}
+
+// ── Extension tables ──
+
+model Character {
+  entityId String @id
+  status   String? // alive, deceased, unknown, dormant, distributed
+  species  String? // human, synth, ai, hybrid
+  age      String?
+  role     String? // protagonist, antagonist, deuteragonist, supporting, minor
+
+  entity         Entity      @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  orgMemberships OrgMember[]
+
+  @@map("characters")
+}
+
+model Location {
+  entityId  String  @id
+  mapId     String?
+  x         Float?
+  y         Float?
+  region    String?
+  condition String? // ruins, partially_restored, functional, fortified, overgrown, contested
+
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  map    Map?   @relation(fields: [mapId], references: [id], onDelete: SetNull)
+
+  @@map("locations")
+}
+
+model Organization {
+  entityId    String  @id
+  parentOrgId String?
+  ideology    String? @db.Text
+  territory   String?
+  status      String? // active, dissolved, underground, emerging
+
+  entity    Entity         @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  parentOrg Organization?  @relation("OrgHierarchy", fields: [parentOrgId], references: [entityId], onDelete: SetNull)
+  childOrgs Organization[] @relation("OrgHierarchy")
+  members   OrgMember[]
+
+  @@map("organizations")
+}
+
+model OrgMember {
+  characterId    String
+  organizationId String
+  role           String?
+
+  character    Character    @relation(fields: [characterId], references: [entityId], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [entityId], onDelete: Cascade)
+
+  @@id([characterId, organizationId])
+  @@map("org_members")
+}
+
+model Item {
+  entityId   String  @id
+  itemTypeId String?
+  fields     Json    @default("{}")
+
+  entity   Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  itemType ItemType? @relation(fields: [itemTypeId], references: [id], onDelete: SetNull)
+
+  @@map("items")
+}
+
+model ItemType {
+  id          String @id @default(cuid())
+  projectId   String
+  name        String
+  slug        String
+  icon        String?
+  color       String?
+  fieldSchema Json   @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items   Item[]
+
+  @@unique([projectId, slug])
+  @@map("item_types")
+}
+
+// ── Relationships ──
+
+model Relationship {
+  id             String  @id @default(cuid())
+  projectId      String
+  sourceEntityId String
+  targetEntityId String
+  label          String
+  description    String? @db.Text
+  metadata       Json?
+  bidirectional  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceEntity Entity  @relation("SourceEntity", fields: [sourceEntityId], references: [id], onDelete: Cascade)
+  targetEntity Entity  @relation("TargetEntity", fields: [targetEntityId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sourceEntityId])
+  @@index([projectId, targetEntityId])
+  @@map("relationships")
+}
+
+// ── Timeline ──
+
+model Era {
+  id          String  @id @default(cuid())
+  projectId   String
+  name        String
+  slug        String
+  description String? @db.Text
+  color       String?
+  startDate   Float
+  endDate     Float
+  sortOrder   Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  timelineEvents TimelineEvent[]
+
+  @@unique([projectId, slug])
+  @@index([projectId, sortOrder])
+  @@map("eras")
+}
+
+model TimelineEvent {
+  id           String  @id @default(cuid())
+  projectId    String
+  name         String
+  description  String? @db.Text
+  date         String
+  dateValue    Float?
+  endDate      String?
+  endDateValue Float?
+  sortOrder    Int
+  periodStart  String?
+  periodEnd    String?
+  significance String  @default("moderate")
+  eraId        String?
+
+  createdAt DateTime @default(now())
+
+  project    Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  era        Era?                  @relation(fields: [eraId], references: [id], onDelete: SetNull)
+  entities   TimelineEventEntity[]
+  scenes     Scene[]
+  plotPoints PlotPoint[]
+
+  @@index([projectId, sortOrder])
+  @@index([projectId, dateValue])
+  @@map("timeline_events")
+}
+
+model TimelineEventEntity {
+  timelineEventId String
+  entityId        String
+  role            String?
+
+  timelineEvent TimelineEvent @relation(fields: [timelineEventId], references: [id], onDelete: Cascade)
+  entity        Entity        @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@id([timelineEventId, entityId])
+  @@map("timeline_event_entities")
+}
+
+// ── Lore ──
+
+model LoreArticle {
+  id        String  @id @default(cuid())
+  projectId String
+  title     String
+  slug      String
+  content   String  @db.Text
+  category  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  entities LoreArticleEntity[]
+
+  loreArticleTags LoreArticleTag[]
+
+  searchVector Unsupported("tsvector")?
+
+  @@unique([projectId, slug])
+  @@index([projectId, category])
+  @@map("lore_articles")
+}
+
+model LoreArticleEntity {
+  loreArticleId String
+  entityId      String
+
+  loreArticle LoreArticle @relation(fields: [loreArticleId], references: [id], onDelete: Cascade)
+  entity      Entity      @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@id([loreArticleId, entityId])
+  @@map("lore_article_entities")
+}
+
+// ── Tags ──
+
+model Tag {
+  id        String  @id @default(cuid())
+  projectId String
+  name      String
+  color     String?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  entityTags      EntityTag[]
+  loreArticleTags LoreArticleTag[]
+
+  @@unique([projectId, name])
+  @@map("tags")
+}
+
+model EntityTag {
+  entityId String
+  tagId    String
+
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([entityId, tagId])
+  @@map("entity_tags")
+}
+
+model LoreArticleTag {
+  loreArticleId String
+  tagId         String
+
+  loreArticle LoreArticle @relation(fields: [loreArticleId], references: [id], onDelete: Cascade)
+  tag         Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([loreArticleId, tagId])
+  @@map("lore_article_tags")
+}
+
+// ============================================================================
+// STORYBOARD (Narrative Structure)
+// ============================================================================
+
+model Plotline {
+  id                String  @id @default(cuid())
+  projectId         String
+  name              String
+  slug              String
+  description       String? @db.Text
+  thematicStatement String? @db.Text
+  parentPlotlineId  String?
+  sortOrder         Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project        Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentPlotline Plotline?  @relation("PlotlineHierarchy", fields: [parentPlotlineId], references: [id], onDelete: SetNull)
+  childPlotlines Plotline[] @relation("PlotlineHierarchy")
+
+  plotPoints PlotPoint[]
+  scenes     Scene[]
+
+  @@unique([projectId, slug])
+  @@map("plotlines")
+}
+
+model PlotPoint {
+  id              String  @id @default(cuid())
+  plotlineId      String
+  sequenceNumber  Int
+  title           String
+  description     String? @db.Text
+  label           String?
+  sceneId         String?
+  timelineEventId String?
+  entityId        String?
+  locationId      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plotline      Plotline       @relation(fields: [plotlineId], references: [id], onDelete: Cascade)
+  scene         Scene?         @relation(fields: [sceneId], references: [id], onDelete: SetNull)
+  timelineEvent TimelineEvent? @relation(fields: [timelineEventId], references: [id], onDelete: SetNull)
+  entity        Entity?        @relation("PlotPointEntity", fields: [entityId], references: [id], onDelete: SetNull)
+  location      Entity?        @relation("PlotPointLocation", fields: [locationId], references: [id], onDelete: SetNull)
+
+  @@index([plotlineId, sequenceNumber])
+  @@map("plot_points")
+}
+
+model Work {
+  id                 String  @id @default(cuid())
+  projectId          String
+  title              String
+  slug               String
+  chronologicalOrder Int
+  releaseOrder       Int
+  synopsis           String? @db.Text
+  status             String  @default("concept")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chapters Chapter[]
+
+  @@unique([projectId, slug])
+  @@map("works")
+}
+
+model Chapter {
+  id             String  @id @default(cuid())
+  workId         String
+  title          String
+  sequenceNumber Int
+  notes          String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  work   Work    @relation(fields: [workId], references: [id], onDelete: Cascade)
+  scenes Scene[]
+
+  @@index([workId, sequenceNumber])
+  @@map("chapters")
+}
+
+model Scene {
+  id              String  @id @default(cuid())
+  chapterId       String
+  title           String?
+  sequenceNumber  Int
+  description     String? @db.Text
+  content         String? @db.Text
+  plotlineId      String?
+  locationId      String?
+  timelineEventId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chapter       Chapter          @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  plotline      Plotline?        @relation(fields: [plotlineId], references: [id], onDelete: SetNull)
+  location      Entity?          @relation("SceneLocation", fields: [locationId], references: [id], onDelete: SetNull)
+  timelineEvent TimelineEvent?   @relation(fields: [timelineEventId], references: [id], onDelete: SetNull)
+  characters    SceneCharacter[]
+  plotPoints    PlotPoint[]
+
+  @@index([chapterId, sequenceNumber])
+  @@map("scenes")
+}
+
+model SceneCharacter {
+  sceneId  String
+  entityId String
+  role     String?
+  isPov    Boolean @default(false)
+
+  scene  Scene  @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@id([sceneId, entityId])
+  @@map("scene_characters")
+}
+
+// ============================================================================
+// MAPS
+// ============================================================================
+
+model Map {
+  id       String @id @default(cuid())
+  projectId String
+  name      String
+  slug      String
+  imageUrl  String
+  width     Int
+  height    Int
+  gridSize  Int    @default(50)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  locations Location[]
+
+  @@unique([projectId, slug])
+  @@map("maps")
+}
+
+// ============================================================================
+// MCP AUTH & REVIEW QUEUE
+// ============================================================================
+
+enum ApiKeyPermission {
+  READ_ONLY
+  READ_WRITE
+}
+
+enum ChangeOperation {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum ChangeStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model ApiKey {
+  id          String           @id @default(cuid())
+  projectId   String
+  userId      String
+  name        String
+  keyHash     String
+  permissions ApiKeyPermission @default(READ_WRITE)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime         @default(now())
+
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pendingChanges PendingChange[]
+
+  @@index([projectId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model PendingChange {
+  id           String          @id @default(cuid())
+  projectId    String
+  apiKeyId     String?
+  batchId      String
+  operation    ChangeOperation
+  targetModel  String
+  targetId     String?
+  proposedData Json            @default("{}")
+  previousData Json?
+  status       ChangeStatus    @default(PENDING)
+  reviewedAt   DateTime?
+  createdAt    DateTime        @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  apiKey  ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, status])
+  @@index([batchId])
+  @@map("pending_changes")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id      String  @id @default(cuid())
+  userId  String
+  type    String
+  title   String
+  message String  @db.Text
+  data    Json    @default("{}")
+  read    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
+}
