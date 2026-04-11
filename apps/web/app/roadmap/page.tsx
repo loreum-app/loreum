@@ -362,7 +362,7 @@ export default function RoadmapPage() {
             <Button variant="outline">Open an issue</Button>
           </a>
           <a
-            href="https://discord.gg/loreum"
+            href="https://discord.gg/A2s5gZ8rcz"
             target="_blank"
             rel="noopener noreferrer"
           >

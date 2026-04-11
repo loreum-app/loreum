@@ -122,7 +122,7 @@ export default function PrivacyPage() {
           <p>
             For privacy questions or data deletion requests, reach out via{" "}
             <a
-              href="https://discord.gg/loreum"
+              href="https://discord.gg/A2s5gZ8rcz"
               className="text-foreground underline"
             >
               Discord

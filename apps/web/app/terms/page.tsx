@@ -152,7 +152,7 @@ export default function TermsPage() {
           <p>
             Questions about these terms? Reach out via{" "}
             <a
-              href="https://discord.gg/loreum"
+              href="https://discord.gg/A2s5gZ8rcz"
               className="text-foreground underline"
             >
               Discord

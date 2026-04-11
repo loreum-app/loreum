@@ -161,14 +161,16 @@ export default function Home() {
         <h1 className="!text-6xl sm:text-5xl">
           Every character, faction, and timeline
           <br />
-          <span className="text-muted-foreground">in one searchable place.</span>
+          <span className="text-muted-foreground">
+            in one searchable place.
+          </span>
         </h1>
         <p className="max-w-2xl text-lg text-muted-foreground">
           Loreum is the database behind your fictional world. Track characters,
           relationships, timelines, organizations, maps, lore, and story
           structure in a purpose-built platform with instant search across
-          everything. No scattered files, no lost notes, no contradictions.
-          AI plugs into all of it, so whether you write solo or with a team,
+          everything. No scattered files, no lost notes, no contradictions. AI
+          plugs into all of it, so whether you write solo or with a team,
           nothing falls through the cracks.
         </p>
         <div className="mt-4 flex gap-3">
@@ -218,8 +220,8 @@ export default function Home() {
             AI that reads your entire world
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-center text-sm text-muted-foreground">
-            Because your world is structured data instead of scattered files,
-            AI can query all of it. Bring your own AI or use the built-in
+            Because your world is structured data instead of scattered files, AI
+            can query all of it. Bring your own AI or use the built-in
             assistant. Proposed changes go through a review queue before
             touching your canon.
           </p>
@@ -341,7 +343,7 @@ export default function Home() {
               </Link>
             )}
             <a
-              href="https://discord.gg/loreum"
+              href="https://discord.gg/A2s5gZ8rcz"
               target="_blank"
               rel="noopener noreferrer"
             >

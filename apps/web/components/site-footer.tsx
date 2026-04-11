@@ -112,7 +112,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <a
-                  href="https://discord.gg/loreum"
+                  href="https://discord.gg/A2s5gZ8rcz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-foreground"

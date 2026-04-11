@@ -94,7 +94,7 @@ export default function MigratePage() {
             </Button>
           </Link>
           <a
-            href="https://discord.gg/loreum"
+            href="https://discord.gg/A2s5gZ8rcz"
             target="_blank"
             rel="noopener noreferrer"
           >
