@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@loreum/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
+import { FolderOpen, LogOut, User } from "lucide-react";
 
 export function UserMenu() {
   const { user, loading, logout } = useAuth();
@@ -60,6 +60,12 @@ export function UserMenu() {
           </div>
         </div>
         <DropdownMenuSeparator />
+        <Link href="/projects">
+          <DropdownMenuItem>
+            <FolderOpen className="mr-1 h-4 w-4" />
+            Projects
+          </DropdownMenuItem>
+        </Link>
         <DropdownMenuItem>
           <User className="mr-1 h-4 w-4" />
           Profile

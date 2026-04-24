@@ -36,6 +36,7 @@ import {
   Plus,
   Check,
   X,
+  Settings,
 } from "lucide-react";
 
 interface ProjectSidebarProps {
@@ -255,6 +256,25 @@ export function ProjectSidebar({
                 </SidebarMenuItem>
               );
             })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup className="mt-auto">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={isActive("settings")}
+                render={
+                  <Link
+                    href={`${basePath}/settings`}
+                    onClick={handleNavClick}
+                  />
+                }
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

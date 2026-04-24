@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, ExtractJwt } from 'passport-jwt';
-import { Request } from 'express';
-import { AppConfig } from '../../config/app.config';
-import { AuthService } from '../services/auth.service';
-import { CookieService } from '../services/cookie.service';
-import { JwtPayload, AuthUser } from '../types/jwt.types';
+import { Injectable } from "@nestjs/common";
+import { PassportStrategy } from "@nestjs/passport";
+import { Strategy, ExtractJwt } from "passport-jwt";
+import { Request } from "express";
+import { AppConfig } from "../../config/app.config";
+import { AuthService } from "../services/auth.service";
+import { CookieService } from "../services/cookie.service";
+import { JwtPayload, AuthUser } from "../types/jwt.types";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -16,10 +16,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
-        // Cookie auth (web)
-        (request: Request) => request?.cookies?.['auth_token'] ?? null,
-        // Bearer auth (MCP, mobile)
-        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        // Cookie auth only — Bearer is handled by ApiKeyAuthGuard
+        (request: Request) => request?.cookies?.["auth_token"] ?? null,
       ]),
       ignoreExpiration: true, // We handle expiration via session validation
       secretOrKey: appConfig.jwt.secret,
@@ -33,11 +31,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const { user, newToken } = await this.authService.validateAndRefreshToken(
       payload,
       req.ip,
-      req.headers['user-agent'],
+      req.headers["user-agent"],
     );
 
     // Token rotation — only set cookies for cookie-based auth
-    if (newToken && req.cookies?.['auth_token']) {
+    if (newToken && req.cookies?.["auth_token"]) {
       this.cookieService.setCookie(res, newToken);
       this.cookieService.setCsrfCookie(res, user.sessionId);
     }

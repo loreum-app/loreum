@@ -11,7 +11,7 @@ import {
   HttpStatus,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiCookieAuth } from "@nestjs/swagger";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { ApiKeyAuthGuard } from "../auth/guards/api-key-auth.guard";
 import { User } from "../auth/decorators/user.decorator";
 import { AuthUser } from "../auth/types/jwt.types";
 import { ProjectsService } from "../projects/projects.service";
@@ -21,7 +21,7 @@ import { UpdateEntityTypeDto } from "./dto/update-entity-type.dto";
 
 @ApiTags("Entity Types")
 @Controller("projects/:projectSlug/entity-types")
-@UseGuards(JwtAuthGuard)
+@UseGuards(ApiKeyAuthGuard)
 @ApiCookieAuth("auth_token")
 export class EntityTypesController {
   constructor(

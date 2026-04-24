@@ -1,4 +1,4 @@
-import { Role } from '../../../generated/prisma/client';
+import { Role, ApiKeyPermission } from "../../../generated/prisma/client";
 
 export interface JwtPayload {
   sub: string; // userId
@@ -15,6 +15,13 @@ export interface AuthUser {
   email: string;
   roles: Role[];
   sessionId: string;
+  /** Present when authenticated via API key instead of JWT session */
+  apiKey?: {
+    id: string;
+    projectId: string;
+    projectSlug: string;
+    permissions: ApiKeyPermission;
+  };
 }
 
 export interface OAuthUserData {

@@ -106,7 +106,7 @@ export default function AiWorldbuildingMcpPost() {
       "command": "node",
       "args": ["path/to/loreum/apps/mcp/dist/index.js"],
       "env": {
-        "MCP_API_BASE_URL": "https://loreum.app/v1",
+        "MCP_API_BASE_URL": "https://api.loreum.app/v1",
         "MCP_API_TOKEN": "your-api-key"
       }
     }

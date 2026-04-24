@@ -17,6 +17,7 @@
     "db:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@loreum/types": "workspace:*",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.1.17",
     "@nestjs/config": "^4.0.3",
@@ -30,7 +31,6 @@
     "@nestjs/throttler": "^6.5.0",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
-    "@loreum/types": "workspace:*",
     "bullmq": "^5.71.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -46,8 +46,8 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@nestjs/cli": "^11.0.7",
     "@loreum/typescript-config": "workspace:*",
+    "@nestjs/cli": "^11.0.7",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/node": "^22.15.3",

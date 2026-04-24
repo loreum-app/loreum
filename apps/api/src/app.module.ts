@@ -5,6 +5,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { AppConfigModule } from "./config/config.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
+import { ApiKeysModule } from "./api-keys/api-keys.module";
 import { QueueModule } from "./queue/queue.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { EntityTypesModule } from "./entity-types/entity-types.module";
@@ -32,6 +33,7 @@ import { AppController } from "./app.controller";
 
     // Auth
     AuthModule,
+    ApiKeysModule,
 
     // Queue (centralized — imports domain modules for processor dispatch)
     QueueModule,

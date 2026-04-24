@@ -10,20 +10,20 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiCookieAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { User } from '../auth/decorators/user.decorator';
-import { AuthUser } from '../auth/types/jwt.types';
-import { ProjectsService } from '../projects/projects.service';
-import { RelationshipsService } from './relationships.service';
-import { CreateRelationshipDto } from './dto/create-relationship.dto';
-import { UpdateRelationshipDto } from './dto/update-relationship.dto';
+} from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiCookieAuth } from "@nestjs/swagger";
+import { ApiKeyAuthGuard } from "../auth/guards/api-key-auth.guard";
+import { User } from "../auth/decorators/user.decorator";
+import { AuthUser } from "../auth/types/jwt.types";
+import { ProjectsService } from "../projects/projects.service";
+import { RelationshipsService } from "./relationships.service";
+import { CreateRelationshipDto } from "./dto/create-relationship.dto";
+import { UpdateRelationshipDto } from "./dto/update-relationship.dto";
 
-@ApiTags('Relationships')
-@Controller('projects/:projectSlug/relationships')
-@UseGuards(JwtAuthGuard)
-@ApiCookieAuth('auth_token')
+@ApiTags("Relationships")
+@Controller("projects/:projectSlug/relationships")
+@UseGuards(ApiKeyAuthGuard)
+@ApiCookieAuth("auth_token")
 export class RelationshipsController {
   constructor(
     private relationshipsService: RelationshipsService,
@@ -31,9 +31,9 @@ export class RelationshipsController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a relationship between entities' })
+  @ApiOperation({ summary: "Create a relationship between entities" })
   async create(
-    @Param('projectSlug') projectSlug: string,
+    @Param("projectSlug") projectSlug: string,
     @User() user: AuthUser,
     @Body() dto: CreateRelationshipDto,
   ) {
@@ -42,11 +42,11 @@ export class RelationshipsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List relationships for a project' })
+  @ApiOperation({ summary: "List relationships for a project" })
   async findAll(
-    @Param('projectSlug') projectSlug: string,
+    @Param("projectSlug") projectSlug: string,
     @User() user: AuthUser,
-    @Query('entity') entity?: string,
+    @Query("entity") entity?: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
     return this.relationshipsService.findAllByProject(project.id, {
@@ -54,36 +54,36 @@ export class RelationshipsController {
     });
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a relationship by ID' })
+  @Get(":id")
+  @ApiOperation({ summary: "Get a relationship by ID" })
   async findOne(
-    @Param('projectSlug') projectSlug: string,
+    @Param("projectSlug") projectSlug: string,
     @User() user: AuthUser,
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
     return this.relationshipsService.findById(project.id, id);
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update a relationship' })
+  @Patch(":id")
+  @ApiOperation({ summary: "Update a relationship" })
   async update(
-    @Param('projectSlug') projectSlug: string,
+    @Param("projectSlug") projectSlug: string,
     @User() user: AuthUser,
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateRelationshipDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
     return this.relationshipsService.update(project.id, id, dto);
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a relationship' })
+  @ApiOperation({ summary: "Delete a relationship" })
   async remove(
-    @Param('projectSlug') projectSlug: string,
+    @Param("projectSlug") projectSlug: string,
     @User() user: AuthUser,
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
     return this.relationshipsService.delete(project.id, id);

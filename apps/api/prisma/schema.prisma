@@ -637,7 +637,7 @@ model ApiKey {
   projectId   String
   userId      String
   name        String
-  keyHash     String
+  keyHash     String           @unique
   permissions ApiKeyPermission @default(READ_WRITE)
   lastUsedAt  DateTime?
   expiresAt   DateTime?
@@ -648,7 +648,6 @@ model ApiKey {
   pendingChanges PendingChange[]
 
   @@index([projectId])
-  @@index([keyHash])
   @@map("api_keys")
 }
 
