@@ -16,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
-        // Cookie auth only — Bearer is handled by ApiKeyAuthGuard
+        // Cookie auth only — Bearer is handled by ApiKeyAuthGuard for lrm_ keys
         (request: Request) => request?.cookies?.["auth_token"] ?? null,
       ]),
       ignoreExpiration: true, // We handle expiration via session validation

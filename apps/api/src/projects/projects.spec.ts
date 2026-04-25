@@ -13,7 +13,8 @@ describe("Projects (integration)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let module: TestingModule;
-  let authHeader: string;
+  let authCookie: string;
+  let csrfToken: string;
   let userId: string;
 
   beforeAll(async () => {
@@ -28,7 +29,8 @@ describe("Projects (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase(prisma);
     const auth = await createAuthenticatedUser(prisma, module);
-    authHeader = auth.authHeader;
+    authCookie = auth.cookie;
+    csrfToken = auth.csrfToken;
     userId = auth.user.id;
   });
 
@@ -40,7 +42,8 @@ describe("Projects (integration)", () => {
     it("creates a project and returns it", async () => {
       const res = await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Middle Earth", description: "Tolkien's world" })
         .expect(201);
 
@@ -63,7 +66,8 @@ describe("Projects (integration)", () => {
     it("returns 400 for missing name", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ description: "no name" })
         .expect(400);
     });
@@ -71,13 +75,15 @@ describe("Projects (integration)", () => {
     it("generates unique slugs for duplicate names", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Duplicate" })
         .expect(201);
 
       const res = await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Duplicate" })
         .expect(201);
 
@@ -93,11 +99,13 @@ describe("Projects (integration)", () => {
     it("lists only the user's projects", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Project A" });
       await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Project B" });
 
       // Second user shouldn't see first user's projects
@@ -107,7 +115,8 @@ describe("Projects (integration)", () => {
 
       const res = await request(app.getHttpServer())
         .get("/v1/projects")
-        .set("Authorization", other.authHeader)
+        .set("Cookie", other.cookie)
+        .set("x-csrf-token", other.csrfToken)
         .expect(200);
 
       expect(res.body).toHaveLength(0);
@@ -118,12 +127,14 @@ describe("Projects (integration)", () => {
     it("returns a project by slug", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Test Project" });
 
       const res = await request(app.getHttpServer())
         .get("/v1/projects/test-project")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(200);
 
       expect(res.body.name).toBe("Test Project");
@@ -132,14 +143,16 @@ describe("Projects (integration)", () => {
     it("returns 404 for non-existent project", async () => {
       await request(app.getHttpServer())
         .get("/v1/projects/does-not-exist")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(404);
     });
 
     it("returns 403 for another user's project", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Private" });
 
       const other = await createAuthenticatedUser(prisma, module, {
@@ -148,7 +161,8 @@ describe("Projects (integration)", () => {
 
       await request(app.getHttpServer())
         .get("/v1/projects/private")
-        .set("Authorization", other.authHeader)
+        .set("Cookie", other.cookie)
+        .set("x-csrf-token", other.csrfToken)
         .expect(403);
     });
   });
@@ -161,12 +175,14 @@ describe("Projects (integration)", () => {
     it("updates project name and regenerates slug", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Old Name" });
 
       const res = await request(app.getHttpServer())
         .patch("/v1/projects/old-name")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "New Name" })
         .expect(200);
 
@@ -177,12 +193,14 @@ describe("Projects (integration)", () => {
     it("updates description without changing slug", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Stable Slug" });
 
       const res = await request(app.getHttpServer())
         .patch("/v1/projects/stable-slug")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ description: "Updated description" })
         .expect(200);
 
@@ -199,17 +217,20 @@ describe("Projects (integration)", () => {
     it("deletes a project", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "To Delete" });
 
       await request(app.getHttpServer())
         .delete("/v1/projects/to-delete")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(204);
 
       await request(app.getHttpServer())
         .get("/v1/projects/to-delete")
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(404);
     });
   });

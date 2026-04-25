@@ -4,6 +4,7 @@ import { JwtService } from "@nestjs/jwt";
 import cookieParser from "cookie-parser";
 import { AppModule } from "../app.module";
 import { PrismaService } from "../prisma/prisma.service";
+import { CookieService } from "../auth/services/cookie.service";
 
 /**
  * Boots a full NestJS app for integration tests.
@@ -79,11 +80,15 @@ export async function createAuthenticatedUser(
     tokenFamily: session.tokenFamily,
   });
 
+  const cookieService = module.get(CookieService);
+  const csrfToken = cookieService.generateCsrfToken(session.id);
+
   return {
     user,
     session,
     token,
-    authHeader: `Bearer ${token}`,
+    cookie: `auth_token=${token}; csrf_token=${csrfToken}`,
+    csrfToken,
   };
 }
 

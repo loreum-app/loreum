@@ -13,7 +13,8 @@ describe("Timeline (integration)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let module: TestingModule;
-  let authHeader: string;
+  let authCookie: string;
+  let csrfToken: string;
   let projectSlug: string;
 
   beforeAll(async () => {
@@ -28,11 +29,13 @@ describe("Timeline (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase(prisma);
     const auth = await createAuthenticatedUser(prisma, module);
-    authHeader = auth.authHeader;
+    authCookie = auth.cookie;
+    csrfToken = auth.csrfToken;
 
     const proj = await request(app.getHttpServer())
       .post("/v1/projects")
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "Timeline World" });
     projectSlug = proj.body.slug;
   });
@@ -46,7 +49,8 @@ describe("Timeline (integration)", () => {
   it("creates a timeline event", async () => {
     const res = await request(app.getHttpServer())
       .post(eventsBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({
         name: "Battle of Helm's Deep",
         date: "TA 3019-03-03",
@@ -64,16 +68,19 @@ describe("Timeline (integration)", () => {
   it("lists timeline events", async () => {
     await request(app.getHttpServer())
       .post(eventsBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "Event A", date: "1000", sortOrder: 1 });
     await request(app.getHttpServer())
       .post(eventsBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "Event B", date: "2000", sortOrder: 2 });
 
     const res = await request(app.getHttpServer())
       .get(eventsBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .expect(200);
 
     expect(res.body).toHaveLength(2);
@@ -82,12 +89,14 @@ describe("Timeline (integration)", () => {
   it("deletes a timeline event", async () => {
     const created = await request(app.getHttpServer())
       .post(eventsBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "Temp Event", date: "500", sortOrder: 1 });
 
     await request(app.getHttpServer())
       .delete(`${eventsBase()}/${created.body.id}`)
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .expect(204);
   });
 
@@ -100,7 +109,8 @@ describe("Timeline (integration)", () => {
   it("creates an era", async () => {
     const res = await request(app.getHttpServer())
       .post(erasBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({
         name: "The Third Age",
         startDate: 1,
@@ -118,16 +128,19 @@ describe("Timeline (integration)", () => {
   it("lists eras", async () => {
     await request(app.getHttpServer())
       .post(erasBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "First Age", startDate: 0, endDate: 500 });
     await request(app.getHttpServer())
       .post(erasBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "Second Age", startDate: 500, endDate: 3441 });
 
     const res = await request(app.getHttpServer())
       .get(erasBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .expect(200);
 
     expect(res.body).toHaveLength(2);
@@ -136,12 +149,14 @@ describe("Timeline (integration)", () => {
   it("deletes an era", async () => {
     await request(app.getHttpServer())
       .post(erasBase())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "Delete Me", startDate: 0, endDate: 1 });
 
     await request(app.getHttpServer())
       .delete(`${erasBase()}/delete-me`)
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .expect(204);
   });
 });

@@ -13,7 +13,8 @@ describe("Relationships (integration)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let module: TestingModule;
-  let authHeader: string;
+  let authCookie: string;
+  let csrfToken: string;
   let projectSlug: string;
 
   beforeAll(async () => {
@@ -28,22 +29,26 @@ describe("Relationships (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase(prisma);
     const auth = await createAuthenticatedUser(prisma, module);
-    authHeader = auth.authHeader;
+    authCookie = auth.cookie;
+    csrfToken = auth.csrfToken;
 
     const proj = await request(app.getHttpServer())
       .post("/v1/projects")
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "Rel World" });
     projectSlug = proj.body.slug;
 
     // Create two entities to relate
     await request(app.getHttpServer())
       .post(`/v1/projects/${projectSlug}/entities`)
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ type: "CHARACTER", name: "Gandalf" });
     await request(app.getHttpServer())
       .post(`/v1/projects/${projectSlug}/entities`)
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ type: "CHARACTER", name: "Frodo" });
   });
 
@@ -52,7 +57,8 @@ describe("Relationships (integration)", () => {
   it("creates a relationship between entities", async () => {
     const res = await request(app.getHttpServer())
       .post(base())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({
         sourceEntitySlug: "gandalf",
         targetEntitySlug: "frodo",
@@ -68,7 +74,8 @@ describe("Relationships (integration)", () => {
   it("lists relationships for a project", async () => {
     await request(app.getHttpServer())
       .post(base())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({
         sourceEntitySlug: "gandalf",
         targetEntitySlug: "frodo",
@@ -77,7 +84,8 @@ describe("Relationships (integration)", () => {
 
     const res = await request(app.getHttpServer())
       .get(base())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .expect(200);
 
     expect(res.body.length).toBeGreaterThanOrEqual(1);
@@ -86,7 +94,8 @@ describe("Relationships (integration)", () => {
   it("deletes a relationship", async () => {
     const created = await request(app.getHttpServer())
       .post(base())
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({
         sourceEntitySlug: "gandalf",
         targetEntitySlug: "frodo",
@@ -95,7 +104,8 @@ describe("Relationships (integration)", () => {
 
     await request(app.getHttpServer())
       .delete(`${base()}/${created.body.id}`)
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .expect(204);
   });
 });

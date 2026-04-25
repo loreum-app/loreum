@@ -40,7 +40,8 @@ describe("Auth (integration)", () => {
 
       const res = await request(app.getHttpServer())
         .get("/v1/auth/me")
-        .set("Authorization", auth.authHeader)
+        .set("Cookie", auth.cookie)
+        .set("x-csrf-token", auth.csrfToken)
         .expect(200);
 
       expect(res.body).toMatchObject({
@@ -57,7 +58,7 @@ describe("Auth (integration)", () => {
     it("returns 401 with invalid token", async () => {
       await request(app.getHttpServer())
         .get("/v1/auth/me")
-        .set("Authorization", "Bearer invalid-token")
+        .set("Cookie", "auth_token=invalid-token")
         .expect(401);
     });
   });
@@ -72,7 +73,8 @@ describe("Auth (integration)", () => {
 
       const res = await request(app.getHttpServer())
         .get("/v1/auth/sessions")
-        .set("Authorization", auth.authHeader)
+        .set("Cookie", auth.cookie)
+        .set("x-csrf-token", auth.csrfToken)
         .expect(200);
 
       expect(res.body).toHaveLength(1);
@@ -90,7 +92,8 @@ describe("Auth (integration)", () => {
 
       await request(app.getHttpServer())
         .delete(`/v1/auth/sessions/${auth.session.id}`)
-        .set("Authorization", auth.authHeader)
+        .set("Cookie", auth.cookie)
+        .set("x-csrf-token", auth.csrfToken)
         .expect(204);
 
       // Session should now be invalid — subsequent requests should fail
@@ -110,7 +113,8 @@ describe("Auth (integration)", () => {
 
       await request(app.getHttpServer())
         .delete(`/v1/auth/sessions/${user1.session.id}`)
-        .set("Authorization", user2.authHeader)
+        .set("Cookie", user2.cookie)
+        .set("x-csrf-token", user2.csrfToken)
         .expect(403);
     });
   });
@@ -125,7 +129,8 @@ describe("Auth (integration)", () => {
 
       const res = await request(app.getHttpServer())
         .post("/v1/auth/logout")
-        .set("Authorization", auth.authHeader)
+        .set("Cookie", auth.cookie)
+        .set("x-csrf-token", auth.csrfToken)
         .expect(204);
 
       // Cookie should be cleared

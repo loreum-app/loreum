@@ -13,7 +13,8 @@ describe("Entities (integration)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let module: TestingModule;
-  let authHeader: string;
+  let authCookie: string;
+  let csrfToken: string;
   let projectSlug: string;
 
   beforeAll(async () => {
@@ -28,12 +29,14 @@ describe("Entities (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase(prisma);
     const auth = await createAuthenticatedUser(prisma, module);
-    authHeader = auth.authHeader;
+    authCookie = auth.cookie;
+    csrfToken = auth.csrfToken;
 
     // Create a project for entity tests
     const res = await request(app.getHttpServer())
       .post("/v1/projects")
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "Test World" });
     projectSlug = res.body.slug;
   });
@@ -48,7 +51,8 @@ describe("Entities (integration)", () => {
     it("creates a CHARACTER entity", async () => {
       const res = await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({
           type: "CHARACTER",
           name: "Gandalf",
@@ -72,7 +76,8 @@ describe("Entities (integration)", () => {
     it("creates a LOCATION entity", async () => {
       const res = await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({
           type: "LOCATION",
           name: "The Shire",
@@ -87,7 +92,8 @@ describe("Entities (integration)", () => {
     it("creates an ORGANIZATION entity", async () => {
       const res = await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({
           type: "ORGANIZATION",
           name: "The Fellowship",
@@ -101,7 +107,8 @@ describe("Entities (integration)", () => {
     it("rejects invalid entity type", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "INVALID", name: "Bad Type" })
         .expect(400);
     });
@@ -109,7 +116,8 @@ describe("Entities (integration)", () => {
     it("rejects missing name", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER" })
         .expect(400);
     });
@@ -117,12 +125,14 @@ describe("Entities (integration)", () => {
     it("generates unique slugs for duplicate names", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Aragorn" });
 
       const res = await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Aragorn" })
         .expect(201);
 
@@ -138,16 +148,19 @@ describe("Entities (integration)", () => {
     it("lists all entities in a project", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Frodo" });
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "LOCATION", name: "Mordor" });
 
       const res = await request(app.getHttpServer())
         .get(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(200);
 
       expect(res.body).toHaveLength(2);
@@ -156,17 +169,20 @@ describe("Entities (integration)", () => {
     it("filters by type", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Sam" });
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "LOCATION", name: "Rivendell" });
 
       const res = await request(app.getHttpServer())
         .get(base())
         .query({ type: "CHARACTER" })
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(200);
 
       expect(res.body).toHaveLength(1);
@@ -176,17 +192,20 @@ describe("Entities (integration)", () => {
     it("searches by name", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Legolas" });
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Gimli" });
 
       const res = await request(app.getHttpServer())
         .get(base())
         .query({ q: "leg" })
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(200);
 
       expect(res.body).toHaveLength(1);
@@ -198,12 +217,14 @@ describe("Entities (integration)", () => {
     it("returns entity with hub data", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Boromir" });
 
       const res = await request(app.getHttpServer())
         .get(`${base()}/boromir`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(200);
 
       expect(res.body.name).toBe("Boromir");
@@ -216,7 +237,8 @@ describe("Entities (integration)", () => {
     it("returns 404 for non-existent entity", async () => {
       await request(app.getHttpServer())
         .get(`${base()}/nope`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(404);
     });
   });
@@ -229,12 +251,14 @@ describe("Entities (integration)", () => {
     it("updates entity fields", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Pippin", summary: "A hobbit" });
 
       const res = await request(app.getHttpServer())
         .patch(`${base()}/pippin`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ summary: "A Took", description: "Peregrin Took" })
         .expect(200);
 
@@ -245,12 +269,14 @@ describe("Entities (integration)", () => {
     it("regenerates slug when name changes", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Strider" });
 
       const res = await request(app.getHttpServer())
         .patch(`${base()}/strider`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Aragorn" })
         .expect(200);
 
@@ -260,12 +286,14 @@ describe("Entities (integration)", () => {
     it("upserts extension fields", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Elrond" });
 
       const res = await request(app.getHttpServer())
         .patch(`${base()}/elrond`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ character: { species: "Elf", role: "Lord of Rivendell" } })
         .expect(200);
 
@@ -281,17 +309,20 @@ describe("Entities (integration)", () => {
     it("deletes an entity", async () => {
       await request(app.getHttpServer())
         .post(base())
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ type: "CHARACTER", name: "Saruman" });
 
       await request(app.getHttpServer())
         .delete(`${base()}/saruman`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(204);
 
       await request(app.getHttpServer())
         .get(`${base()}/saruman`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(404);
     });
   });

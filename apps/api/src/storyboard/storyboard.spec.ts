@@ -13,7 +13,8 @@ describe("Storyboard (integration)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let module: TestingModule;
-  let authHeader: string;
+  let authCookie: string;
+  let csrfToken: string;
   let projectSlug: string;
 
   beforeAll(async () => {
@@ -28,11 +29,13 @@ describe("Storyboard (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase(prisma);
     const auth = await createAuthenticatedUser(prisma, module);
-    authHeader = auth.authHeader;
+    authCookie = auth.cookie;
+    csrfToken = auth.csrfToken;
 
     const proj = await request(app.getHttpServer())
       .post("/v1/projects")
-      .set("Authorization", authHeader)
+      .set("Cookie", authCookie)
+      .set("x-csrf-token", csrfToken)
       .send({ name: "Story World" });
     projectSlug = proj.body.slug;
   });
@@ -47,7 +50,8 @@ describe("Storyboard (integration)", () => {
     it("creates a plotline", async () => {
       const res = await request(app.getHttpServer())
         .post(`${base()}/plotlines`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "The Ring Quest", description: "Destroy the One Ring" })
         .expect(201);
 
@@ -60,16 +64,19 @@ describe("Storyboard (integration)", () => {
     it("lists plotlines", async () => {
       await request(app.getHttpServer())
         .post(`${base()}/plotlines`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Plotline A" });
       await request(app.getHttpServer())
         .post(`${base()}/plotlines`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Plotline B" });
 
       const res = await request(app.getHttpServer())
         .get(`${base()}/plotlines`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(200);
 
       expect(res.body).toHaveLength(2);
@@ -78,12 +85,14 @@ describe("Storyboard (integration)", () => {
     it("deletes a plotline", async () => {
       await request(app.getHttpServer())
         .post(`${base()}/plotlines`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Temp Plot" });
 
       await request(app.getHttpServer())
         .delete(`${base()}/plotlines/temp-plot`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(204);
     });
   });
@@ -96,7 +105,8 @@ describe("Storyboard (integration)", () => {
     it("creates a work", async () => {
       const res = await request(app.getHttpServer())
         .post(`${base()}/works`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({
           title: "The Fellowship of the Ring",
           chronologicalOrder: 1,
@@ -114,7 +124,8 @@ describe("Storyboard (integration)", () => {
       // Create work
       const work = await request(app.getHttpServer())
         .post(`${base()}/works`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({
           title: "Book One",
           chronologicalOrder: 1,
@@ -124,7 +135,8 @@ describe("Storyboard (integration)", () => {
       // Create chapter
       const chapter = await request(app.getHttpServer())
         .post(`${base()}/works/${work.body.slug}/chapters`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ title: "Chapter 1", sequenceNumber: 1 })
         .expect(201);
 
@@ -133,7 +145,8 @@ describe("Storyboard (integration)", () => {
       // Create scene
       const scene = await request(app.getHttpServer())
         .post(`${base()}/scenes`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({
           chapterId: chapter.body.id,
           sequenceNumber: 1,
@@ -147,7 +160,8 @@ describe("Storyboard (integration)", () => {
       // Verify the hierarchy via GET work
       const fullWork = await request(app.getHttpServer())
         .get(`${base()}/works/${work.body.slug}`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .expect(200);
 
       expect(fullWork.body.chapters).toHaveLength(1);
@@ -163,12 +177,14 @@ describe("Storyboard (integration)", () => {
     it("creates a plot point on a plotline", async () => {
       await request(app.getHttpServer())
         .post(`${base()}/plotlines`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ name: "Main Arc" });
 
       const res = await request(app.getHttpServer())
         .post(`${base()}/plotlines/main-arc/points`)
-        .set("Authorization", authHeader)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
         .send({ title: "Inciting Incident", sequenceNumber: 1 })
         .expect(201);
 
