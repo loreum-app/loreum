@@ -38,6 +38,18 @@ export class StoryboardController {
     private projectsService: ProjectsService,
   ) {}
 
+  // ── Overview ──
+
+  @Get()
+  @ApiOperation({ summary: "Get storyboard overview (plotlines + works)" })
+  async getOverview(
+    @Param("projectSlug") projectSlug: string,
+    @User() user: AuthUser,
+  ) {
+    const project = await this.projectsService.findBySlug(projectSlug, user.id);
+    return this.storyboardService.getOverview(project.id);
+  }
+
   // ── Plotlines ──
 
   @Post("plotlines")

@@ -22,6 +22,38 @@ const plotPointInclude = {
 export class StoryboardService {
   constructor(private prisma: PrismaService) {}
 
+  // ── Overview ──
+
+  async getOverview(projectId: string) {
+    const [plotlines, works] = await Promise.all([
+      this.prisma.plotline.findMany({
+        where: { projectId },
+        orderBy: { sortOrder: "asc" },
+        include: {
+          childPlotlines: { select: { id: true, name: true, slug: true } },
+          _count: { select: { plotPoints: true } },
+        },
+      }),
+      this.prisma.work.findMany({
+        where: { projectId },
+        orderBy: { releaseOrder: "asc" },
+        include: {
+          chapters: {
+            orderBy: { sequenceNumber: "asc" },
+            select: {
+              id: true,
+              title: true,
+              sequenceNumber: true,
+              _count: { select: { scenes: true } },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return { plotlines, works };
+  }
+
   // ── Plotlines ──
 
   async createPlotline(projectId: string, dto: CreatePlotlineDto) {
@@ -393,7 +425,12 @@ export class StoryboardService {
       include: {
         plotline: { select: { id: true, name: true, slug: true } },
         characters: {
-          select: { entityId: true, role: true, isPov: true, entity: { select: { id: true, name: true, slug: true } } },
+          select: {
+            entityId: true,
+            role: true,
+            isPov: true,
+            entity: { select: { id: true, name: true, slug: true } },
+          },
         },
         location: { select: { id: true, name: true, slug: true } },
       },
@@ -442,7 +479,12 @@ export class StoryboardService {
       include: {
         plotline: { select: { id: true, name: true, slug: true } },
         characters: {
-          select: { entityId: true, role: true, isPov: true, entity: { select: { id: true, name: true, slug: true } } },
+          select: {
+            entityId: true,
+            role: true,
+            isPov: true,
+            entity: { select: { id: true, name: true, slug: true } },
+          },
         },
         location: { select: { id: true, name: true, slug: true } },
       },

@@ -12,19 +12,12 @@ Tracked tasks for Loreum. Near-term is the next couple weeks, long-term is every
 - [x] Rename to Loreum
 - [x] Deploy production at loreum.app (PM2 + Cloudflare Tunnel)
 - [x] Create open source repo (fresh git history) - https://github.com/Loreum-App/loreum
+- [x] MCP Authentication & API Keys (ApiKey model, service, controller, Bearer token auth, management UI)
+- [x] Broken MCP Endpoints (search stub, entity hub aggregation, storyboard overview)
 
 ---
 
 ## Near-Term (Next 2 Weeks)
-
-### MCP Authentication & API Keys
-
-- [ ] `ApiKey` + `PendingChange` models (already in schema, needs migration)
-- [ ] Prisma migration
-- [ ] API key service: generate (bcrypt hash, return plaintext once), list, revoke
-- [ ] API key controller: `POST /projects/:slug/api-keys`, `GET /projects/:slug/api-keys`, `DELETE /projects/:slug/api-keys/:id`
-- [ ] JWT strategy: accept API key as Bearer token, resolve to project + permissions
-- [ ] API key management UI in project settings (generate, copy, revoke, list with last-used)
 
 ### MCP Review Queue (Staging Area)
 
@@ -45,36 +38,49 @@ Tracked tasks for Loreum. Near-term is the next couple weeks, long-term is every
 - [ ] Sidebar badge showing pending change count
 - [ ] Notification when new pending changes arrive
 
-### MCP Tools (Planned)
+### MCP Read Tools + Search (next priority)
 
-See [MCP_IMPLEMENTATION_PLAN.md](MCP_IMPLEMENTATION_PLAN.md) for full sequencing and context.
+See [MCP_IMPLEMENTATION_PLAN.md](MCP_IMPLEMENTATION_PLAN.md) Phase 3 for full context.
 
-**Read tools** (safe to build now — API endpoints exist):
+**Search** (API work — endpoint exists as stub, needs real implementation):
 
-- [ ] `get_timeline` - read tool
-- [ ] `get_lore_article` - read tool
-- [ ] `list_lore_articles` - read tool
-- [ ] `get_relationships` - read tool
+- [ ] Implement Prisma `contains` search across entities, lore, timeline, scenes
+- [ ] Return unified result format with type labels and excerpts
 
-**Write tools** (blocked on Review Queue — do not implement until PendingChange is built):
+**Read tools** (MCP-side only — all API endpoints exist):
 
-- [ ] `update_lore_article` - write tool
-- [ ] `delete_entity` - write tool
-- [ ] `delete_relationship` - write tool
-- [ ] `delete_lore_article` - write tool
-- [ ] `create_timeline_event` - write tool
-- [ ] `update_timeline_event` - write tool
-- [ ] `delete_timeline_event` - write tool
-- [ ] `create_scene` - write tool
-- [ ] `update_scene` - write tool
-- [ ] `create_plot_point` - write tool
-- [ ] `update_plot_point` - write tool
+- [ ] `list_projects` - list user's projects
+- [ ] `get_project` - project detail
+- [ ] `list_relationships` - relationships, optionally filtered by entity
+- [ ] `get_timeline` - timeline events with filters
+- [ ] `get_timeline_event` - single event detail
+- [ ] `list_eras` - eras for a project
+- [ ] `list_lore_articles` - filter lore articles
+- [ ] `get_lore_article` - single lore article
+- [ ] `list_tags` - all tags in a project
+- [ ] `get_plotline` - plotline with plot points
+- [ ] `get_work` - work with chapters and scene structure
+- [ ] `list_scenes` - scenes in a chapter (narrative content)
 
-### Broken MCP Endpoints (API work, not MCP)
+**Quality pass:**
 
-- [ ] `GET /projects/:slug/search` - unified search controller (used by `search_project` tool)
-- [ ] `GET /projects/:slug/entities/:slug/hub` - entity hub aggregation (used by `get_entity_hub` tool)
-- [ ] `GET /projects/:slug/storyboard?book=&detail=` - unified storyboard (used by `get_storyboard` tool)
+- [ ] Improve tool descriptions
+- [ ] Response shaping (strip noise, flatten nesting)
+- [ ] `api()` error handling (structured MCP errors)
+
+### MCP Write Tools (blocked on Review Queue)
+
+- [ ] `update_lore_article`
+- [ ] `delete_entity`
+- [ ] `delete_relationship`
+- [ ] `delete_lore_article`
+- [ ] `create_timeline_event`
+- [ ] `update_timeline_event`
+- [ ] `delete_timeline_event`
+- [ ] `create_scene`
+- [ ] `update_scene`
+- [ ] `create_plot_point`
+- [ ] `update_plot_point`
 
 ### Global Design & Polish
 
@@ -194,7 +200,7 @@ See [MCP_IMPLEMENTATION_PLAN.md](MCP_IMPLEMENTATION_PLAN.md) for full sequencing
 ### Phase 6 - Platform
 
 - [ ] Offline desktop app - work without internet, sync when reconnected
-- [ ] API key generation + bearer auth (see MCP section above)
+- [x] API key generation + bearer auth
 - [ ] REST API documentation page (`/docs/api`)
 - [ ] Rate limiting per API key
 - [ ] Webhook support (entity created/updated/deleted events)

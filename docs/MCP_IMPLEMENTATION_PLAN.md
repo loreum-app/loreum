@@ -3,7 +3,8 @@
 Scoped plan for completing the MCP server to a testable state. Covers API prerequisites, auth, review queue, and MCP tool expansion.
 
 **Created:** 2026-04-24
-**Status:** In progress
+**Updated:** 2026-04-24
+**Status:** Phases 1–2 complete, Phase 3 next
 **Reference:** See TODO.md > Near-Term for task tracking
 
 ---
@@ -14,23 +15,34 @@ Scoped plan for completing the MCP server to a testable state. Covers API prereq
 
 The MCP server (`apps/mcp/src/index.ts`) is a single-file stdio server with:
 
-- 6 read tools: `search_project`, `get_entity`, `get_entity_hub`, `list_entities`, `get_storyboard`, `get_entity_types`
+- 5 read tools: `search_project`, `get_entity`, `list_entities`, `get_storyboard`, `get_entity_types`
 - 4 write tools: `create_entity`, `update_entity`, `create_relationship`, `create_lore_article`
 - 1 resource: `project_overview`
 - A simple `api()` helper that throws on HTTP errors
-- Auth via `MCP_API_TOKEN` env var (raw JWT copied from browser)
+- Auth via `MCP_API_TOKEN` env var (API key with `lrm_` prefix, Bearer token)
+- API key system with generate/list/revoke, project-scoped permissions (READ_ONLY / READ_WRITE)
 
-### What's broken or missing
+### What's done
 
-**3 existing tools call API endpoints that don't exist:**
+**Phase 1 (API Key Auth) — Complete:**
 
-| MCP Tool         | Expected Endpoint                              | Issue                                                                                    |
-| ---------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `search_project` | `GET /projects/:slug/search`                   | No search controller — entity/lore `?q=` provides partial coverage but no unified search |
-| `get_entity_hub` | `GET /projects/:slug/entities/:slug/hub`       | No hub aggregation endpoint — standard entity GET includes some connected data           |
-| `get_storyboard` | `GET /projects/:slug/storyboard?book=&detail=` | No unified storyboard endpoint — API has separate plotline/work/scene endpoints          |
+- `ApiKey` Prisma model with SHA-256 hashing, permissions enum, expiration, revocation
+- API key service (generate, list, revoke, validate) + controller endpoints
+- `ApiKeyAuthGuard` accepts both cookie JWTs and Bearer API keys
+- API key management UI in project settings
 
-**Auth is incomplete:** No API key system. Users must copy raw JWTs from browser cookies. No project-scoped permissions, no key management UI.
+**Phase 2 (Fix Broken Endpoints) — Complete:**
+
+- `GET /projects/:slug/search` — stub returning empty results (OpenSearch pending for full-text)
+- `GET /projects/:slug/entities/:slug` — entity hub aggregation with relationships, lore, timeline, tags
+- `GET /projects/:slug/storyboard` — overview with plotlines + works/chapters/scene counts
+- `get_entity_hub` tool removed from MCP (entity detail endpoint serves its purpose)
+
+### What's remaining
+
+**Read tool coverage is thin:** Only 5 of ~17 useful read tools exist. Missing: project navigation, relationships, timeline/eras, lore articles, tags, plotline/work/scene detail. An AI can't fully explore a world yet.
+
+**Search is a stub:** The `search_project` tool calls the endpoint but always gets empty results. Needs a real Prisma `contains` implementation across entities, lore, timeline, and scenes.
 
 **Write tools bypass review queue:** All mutation tools write directly to the DB. The spec requires all MCP writes to go through `PendingChange` staging.
 
@@ -40,45 +52,72 @@ The MCP server (`apps/mcp/src/index.ts`) is a single-file stdio server with:
 
 ## Implementation Order
 
-### Phase 1: API Key Authentication
+### Phase 1: API Key Authentication — COMPLETE
 
-**Goal:** Users can generate project-scoped API keys and use them as Bearer tokens. Unblocks testing the full remote flow via cloudflared with existing read tools.
+**Goal:** Users can generate project-scoped API keys and use them as Bearer tokens.
 
-**Scope:** API-side work in `apps/api/`.
+**Delivered:**
 
-1. Run Prisma migration for `ApiKey` + `PendingChange` models (already in schema)
-2. API key service: generate (bcrypt hash, return plaintext once), list, revoke, validate
-3. API key controller: `POST /projects/:slug/api-keys`, `GET /projects/:slug/api-keys`, `DELETE /projects/:slug/api-keys/:id`
-4. Update JWT/auth strategy to accept API keys as Bearer tokens, resolving to project + permissions (`READ_ONLY` / `READ_WRITE`)
-5. Track `lastUsedAt` on each API key usage
-6. API key management UI in project settings (generate, copy, revoke, list with last-used)
+- `ApiKey` Prisma model + migration (SHA-256 hash, `lrm_` prefix, permissions enum)
+- API key service: generate, list, revoke, validate with `lastUsedAt` tracking
+- Controller: `POST/GET/DELETE /projects/:slug/api-keys`
+- `ApiKeyAuthGuard` accepts both cookie JWTs and Bearer API keys
+- Management UI in project settings
 
-**Test gate:** Generate an API key in the UI, configure Claude Desktop with it as `MCP_API_TOKEN`, and successfully call `list_entities` against the production API via cloudflared.
+### Phase 2: Fix Broken API Endpoints — COMPLETE
 
-### Phase 2: Fix Broken API Endpoints
+**Goal:** MCP read tools no longer 404.
 
-**Goal:** The 3 existing MCP tools that currently 404 should work.
+**Delivered:**
 
-**Scope:** API-side work in `apps/api/`. The MCP server already has the tool handlers wired up — they just need working endpoints to call.
+- `GET /projects/:slug/search` — stub (returns empty, OpenSearch is long-term)
+- `GET /projects/:slug/entities/:slug` — entity detail with full hub data (relationships, lore, timeline, tags)
+- `GET /projects/:slug/storyboard` — overview with plotlines + works/chapters/scene counts
+- Removed `get_entity_hub` MCP tool (entity detail endpoint covers it)
 
-1. **Search endpoint** — `GET /projects/:slug/search?q=&types=&limit=`
-   - Query entities, lore articles, timeline events, scenes
-   - Filter by type array
-   - Return unified result format with type labels
-   - Can use Prisma `contains` queries for now (OpenSearch is long-term)
+### Phase 3: Complete MCP Read Tools + Search
 
-2. **Entity hub endpoint** — `GET /projects/:slug/entities/:slug/hub`
-   - Return entity with all connected data: relationships (outgoing + incoming), lore articles, timeline events, scene appearances, tags
-   - Single query with Prisma includes, or parallel queries assembled in the service
+**Goal:** Full read coverage — every content type in Loreum is readable via MCP, and search actually works.
 
-3. **Storyboard aggregation endpoint** — `GET /projects/:slug/storyboard?book=&detail=`
-   - Return `{ plotlines: [...], works: [...] }` in one response
-   - `book` param filters to a specific work
-   - `detail=outline` returns structure only (no scene content), `detail=full` includes everything
+**Scope:** MCP tools in `apps/mcp/`, plus API work for search.
 
-**Test gate:** All 6 existing read tools return real data when called from Claude Desktop.
+#### 3a. Search implementation (`apps/api/`)
 
-### Phase 3: Review Queue (API + MCP)
+The search endpoint is currently a stub returning empty results. Implement basic Prisma `contains` search across all content types:
+
+- Query entities (name, summary, description), lore articles (title, content), timeline events (title, description), scenes (title, content)
+- Filter by `types` array (entity, lore, timeline, scene)
+- Return unified result format: `{ results: [{ type, slug, name/title, excerpt }], total }`
+- Prisma `contains` is sufficient for now (OpenSearch is long-term)
+
+#### 3b. New MCP read tools (`apps/mcp/`)
+
+All API endpoints already exist. MCP-side only.
+
+| Tool                 | API Endpoint                                         | Notes                                              |
+| -------------------- | ---------------------------------------------------- | -------------------------------------------------- |
+| `list_projects`      | `GET /projects`                                      | List user's projects                               |
+| `get_project`        | `GET /projects/:slug`                                | Project detail (replaces resource-only access)     |
+| `list_relationships` | `GET /projects/:slug/relationships?entity=`          | Relationships, optionally filtered by entity       |
+| `get_timeline`       | `GET /projects/:slug/timeline?entity=&significance=` | Timeline events with optional filters              |
+| `get_timeline_event` | `GET /projects/:slug/timeline/:id`                   | Single event detail                                |
+| `list_eras`          | `GET /projects/:slug/timeline/eras`                  | Eras for a project                                 |
+| `list_lore_articles` | `GET /projects/:slug/lore?q=&category=&entity=`      | Filter lore articles                               |
+| `get_lore_article`   | `GET /projects/:slug/lore/:slug`                     | Single lore article                                |
+| `list_tags`          | `GET /projects/:slug/tags`                           | All tags in a project                              |
+| `get_plotline`       | `GET /projects/:slug/storyboard/plotlines/:slug`     | Plotline with plot points                          |
+| `get_work`           | `GET /projects/:slug/storyboard/works/:slug`         | Work with chapters and scene structure             |
+| `list_scenes`        | `GET /projects/:slug/storyboard/scenes?chapterId=`   | Scenes in a chapter (the actual narrative content) |
+
+#### 3c. Quality pass
+
+- Improve tool descriptions (clear, specific, no jargon)
+- Add response shaping (strip `createdAt`/`updatedAt`/internal IDs where noisy, flatten nesting)
+- Fix `api()` error handling (return structured MCP errors instead of throwing)
+
+**Test gate:** From Claude Desktop, an AI can navigate from projects → entities → relationships → lore → timeline → storyboard scenes without hitting any dead ends. Search returns real results.
+
+### Phase 4: Review Queue (API + MCP + UI)
 
 **Goal:** All MCP write operations stage changes as `PendingChange` records instead of writing directly. Users review and accept/reject from the web UI.
 
@@ -107,7 +146,7 @@ The MCP server (`apps/mcp/src/index.ts`) is a single-file stdio server with:
    - Return confirmation that the change was staged, not applied
    - Include `batchId` (generated per MCP session or conversation)
 
-4. Update `api()` helper to return structured MCP errors instead of throwing
+4. Update `api()` helper to return structured MCP errors instead of throwing (if not done in Phase 3)
 
 #### Web UI work (`apps/web/`)
 
@@ -120,29 +159,7 @@ The MCP server (`apps/mcp/src/index.ts`) is a single-file stdio server with:
 
 **Test gate:** From Claude Desktop, create an entity via MCP. Verify it appears in the review queue (not in the entity list). Accept it from the web UI. Verify it now appears in the entity list.
 
-### Phase 4: Expand MCP Read Tools
-
-**Goal:** Add the remaining read tools that map to existing API endpoints.
-
-**Scope:** MCP-side only. All endpoints already exist.
-
-| Tool                 | API Endpoint                                    | Notes                                              |
-| -------------------- | ----------------------------------------------- | -------------------------------------------------- |
-| `list_projects`      | `GET /projects`                                 | List user's projects                               |
-| `get_project`        | `GET /projects/:slug`                           | Single project detail                              |
-| `get_timeline`       | `GET /projects/:slug/timeline`                  | Timeline events, supports `?entity=&significance=` |
-| `list_eras`          | `GET /projects/:slug/timeline/eras`             | Eras for a project                                 |
-| `get_lore_article`   | `GET /projects/:slug/lore/:slug`                | Single lore article                                |
-| `list_lore_articles` | `GET /projects/:slug/lore?q=&category=&entity=` | Filter lore articles                               |
-| `get_relationships`  | `GET /projects/:slug/relationships?entity=`     | Relationships, optionally filtered by entity       |
-
-Also in this phase:
-
-- Improve tool descriptions (clear, specific, no jargon)
-- Add response shaping (strip `createdAt`/`updatedAt`/internal IDs, flatten nesting)
-- Fix `api()` error handling if not done in Phase 3
-
-### Phase 5: Expand MCP Write Tools (blocked on Phase 3)
+### Phase 5: Expand MCP Write Tools (blocked on Phase 4)
 
 **Goal:** Add the remaining mutation tools, all routing through PendingChange.
 

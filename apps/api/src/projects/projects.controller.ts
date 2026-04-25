@@ -7,6 +7,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -38,6 +39,19 @@ export class ProjectsController {
   @ApiOperation({ summary: "List all projects for the current user" })
   findAll(@User() user: AuthUser) {
     return this.projectsService.findAllByUser(user.id);
+  }
+
+  @Get(":slug/search")
+  @ApiOperation({
+    summary: "Search across project content (stub — OpenSearch pending)",
+  })
+  async search(
+    @Param("slug") slug: string,
+    @User() user: AuthUser,
+    @Query("q") q?: string,
+  ) {
+    await this.projectsService.findBySlug(slug, user.id);
+    return { results: [], query: q ?? "", total: 0 };
   }
 
   @Get(":slug/graph-layout")

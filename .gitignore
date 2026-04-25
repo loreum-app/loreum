@@ -42,3 +42,4 @@ data/
 *.pem
 
 .claude/
+.vscode/

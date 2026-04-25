@@ -93,26 +93,6 @@ server.registerTool(
 );
 
 server.registerTool(
-  "get_entity_hub",
-  {
-    description:
-      "Get the full aggregated lore page for an entity — everything connected to it",
-    inputSchema: {
-      projectSlug: z.string(),
-      entitySlug: z.string(),
-    },
-  },
-  async ({ projectSlug, entitySlug }) => {
-    const hub = await api(
-      `/projects/${projectSlug}/entities/${entitySlug}/hub`,
-    );
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(hub, null, 2) }],
-    };
-  },
-);
-
-server.registerTool(
   "list_entities",
   {
     description: "List and filter entities in a project",
@@ -143,20 +123,13 @@ server.registerTool(
   "get_storyboard",
   {
     description:
-      "Get the narrative structure: plotlines, books, chapters, scenes",
+      "Get the storyboard overview: all plotlines and works with chapters",
     inputSchema: {
       projectSlug: z.string(),
-      bookSlug: z.string().optional(),
-      detail: z.enum(["outline", "full"]).optional(),
     },
   },
-  async ({ projectSlug, bookSlug, detail }) => {
-    const params = new URLSearchParams();
-    if (bookSlug) params.set("book", bookSlug);
-    if (detail) params.set("detail", detail);
-    const query = params.toString() ? `?${params}` : "";
-
-    const storyboard = await api(`/projects/${projectSlug}/storyboard${query}`);
+  async ({ projectSlug }) => {
+    const storyboard = await api(`/projects/${projectSlug}/storyboard`);
     return {
       content: [
         { type: "text" as const, text: JSON.stringify(storyboard, null, 2) },
