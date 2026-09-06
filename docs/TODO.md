@@ -27,7 +27,6 @@ Tracked tasks for Loreum. Near-term is the next couple weeks, long-term is every
 ### MCP follow-ups
 
 - [ ] Client ID Metadata Documents (CIMD) as a registration method alongside DCR (needs an SSRF-hardened fetcher; DCR is deprecated by the 2026-07-28 spec but supported for 12+ months)
-- [ ] Postgres row-level security as a second isolation layer (restricted app DB role + `app.project_id` GUC; needs a prod role provisioning step)
 - [ ] Structured tool output (`outputSchema` / `structuredContent`) once major clients consume it
 - [ ] Response-size caps / pagination on large list tools
 - [ ] Refresh-token grace window for dropped token responses (strict rotation today)
