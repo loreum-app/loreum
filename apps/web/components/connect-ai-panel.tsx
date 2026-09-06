@@ -110,7 +110,8 @@ export function ConnectAiPanel({ projectSlug }: { projectSlug: string }) {
                 </>,
                 <>
                   Choose <b>Add custom connector</b> and paste the URL above.
-                  Leave the OAuth client fields empty.
+                  Keep the recommended &quot;Anthropic&apos;s hosted client
+                  metadata&quot; option.
                 </>,
                 <>
                   Click <b>Connect</b>. A Loreum page opens: pick read &amp;

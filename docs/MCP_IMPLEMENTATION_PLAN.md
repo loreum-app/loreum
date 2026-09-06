@@ -187,7 +187,6 @@ All domain services already exist. MCP module only.
 These are explicitly deferred and should not be built during this work:
 
 - **Style Guide MCP tools** (`get_style_guide`, `set_style_guide`) — blocked on Style Guide model/migration/service/controller which is long-term work
-- **CIMD client registration** — follow-up to DCR (needs SSRF-hardened metadata fetch)
 
 ---
 

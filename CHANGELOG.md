@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### MCP OAuth
+
+- **Client ID Metadata Documents** (the registration method MCP recommends and claude.ai prefers): `https` client ids are resolved to their metadata document with an SSRF-hardened fetch (public addresses only, socket pinned to the validated address, no redirects, 5 s / 64 KiB limits), cached for an hour. Advertised via `client_id_metadata_document_supported`. Dynamic registration remains available.
+- Bearer scheme accepted case-insensitively; every OAuth and MCP request outcome is logged.
+
 ## [0.2.0] - 2026-09-05
 
 ### Toolchain

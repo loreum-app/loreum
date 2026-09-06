@@ -738,17 +738,18 @@ Permissions are `READ_ONLY` or `READ_WRITE` (OAuth scopes `read` / `write`), cho
 
 ### OAuth 2.1 authorization server
 
-| Endpoint                                                 | Purpose                                                                   |
-| -------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `GET /.well-known/oauth-authorization-server`            | RFC 8414 metadata (issuer = `PUBLIC_API_URL`)                             |
-| `GET /.well-known/oauth-protected-resource/v1/mcp/:slug` | RFC 9728 metadata for one project                                         |
-| `POST /v1/oauth/register`                                | RFC 7591 dynamic client registration (public or confidential clients)     |
-| `GET /v1/oauth/authorize`                                | Validates the request, redirects to `${WEB_URL}/authorize` (consent page) |
-| `GET/POST /v1/oauth/consent`                             | Consent page support (cookie session + CSRF)                              |
-| `POST /v1/oauth/token`                                   | `authorization_code` (PKCE S256 required) and `refresh_token` grants      |
-| `POST /v1/oauth/revoke`                                  | RFC 7009                                                                  |
-| `GET /v1/projects/:slug/connections`                     | Connected apps for a project (cookie auth)                                |
-| `DELETE /v1/projects/:slug/connections/:id`              | Disconnect an app (revokes all of its tokens)                             |
+| Endpoint                                                 | Purpose                                                                                                                                           |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /.well-known/oauth-authorization-server`            | RFC 8414 metadata (issuer = `PUBLIC_API_URL`)                                                                                                     |
+| `GET /.well-known/oauth-protected-resource/v1/mcp/:slug` | RFC 9728 metadata for one project                                                                                                                 |
+| `POST /v1/oauth/register`                                | RFC 7591 dynamic client registration (public or confidential clients)                                                                             |
+| _(client_id = https URL)_                                | Client ID Metadata Documents: the document at that URL is fetched (SSRF-hardened, cached 1h) and used as the registration; always a public client |
+| `GET /v1/oauth/authorize`                                | Validates the request, redirects to `${WEB_URL}/authorize` (consent page)                                                                         |
+| `GET/POST /v1/oauth/consent`                             | Consent page support (cookie session + CSRF)                                                                                                      |
+| `POST /v1/oauth/token`                                   | `authorization_code` (PKCE S256 required) and `refresh_token` grants                                                                              |
+| `POST /v1/oauth/revoke`                                  | RFC 7009                                                                                                                                          |
+| `GET /v1/projects/:slug/connections`                     | Connected apps for a project (cookie auth)                                                                                                        |
+| `DELETE /v1/projects/:slug/connections/:id`              | Disconnect an app (revokes all of its tokens)                                                                                                     |
 
 Design notes:
 
