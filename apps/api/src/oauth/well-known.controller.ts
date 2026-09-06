@@ -71,6 +71,9 @@ export class WellKnownController {
         "client_secret_basic",
       ],
       scopes_supported: [...MCP_SCOPES],
+      // Client ID Metadata Documents: https client_id URLs are accepted and
+      // resolved to their metadata (MCP's recommended registration method).
+      client_id_metadata_document_supported: true,
       authorization_response_iss_parameter_supported: true,
       service_documentation: this.config.mcp.docsUrl,
     };

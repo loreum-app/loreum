@@ -6,6 +6,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { AppConfig } from "../config/app.config";
 import { OAuthError } from "./oauth.errors";
 import { generateSecret, hashSecret, safeEqual } from "./tokens";
+import { CimdService, isCimdClientId } from "./cimd.service";
+import { assertValidRedirectUri, redirectUriMatches } from "./redirect-uris";
 
 const AUTH_METHODS = [
   "none",
@@ -13,13 +15,6 @@ const AUTH_METHODS = [
   "client_secret_basic",
 ] as const;
 const SUPPORTED_GRANTS = ["authorization_code", "refresh_token"];
-const FORBIDDEN_SCHEMES = new Set([
-  "javascript:",
-  "data:",
-  "file:",
-  "vbscript:",
-]);
-const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /** RFC 7591 §2 client metadata (the subset MCP clients send). */
 export const ClientMetadataSchema = z.object({
@@ -37,69 +32,6 @@ export const ClientMetadataSchema = z.object({
   application_type: z.enum(["web", "native"]).optional(),
 });
 export type ClientMetadata = z.infer<typeof ClientMetadataSchema>;
-
-function isLoopback(url: URL): boolean {
-  return url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname);
-}
-
-/**
- * Exact-match redirect URI comparison (no wildcards), with the RFC 8252 §7.3
- * loopback exception: the port of http://localhost / http://127.0.0.1 /
- * http://[::1] redirects is ignored because native clients (Claude Code,
- * Cursor) bind an ephemeral port per session.
- */
-export function redirectUriMatches(
-  registered: string,
-  requested: string,
-): boolean {
-  if (registered === requested) return true;
-  let a: URL;
-  let b: URL;
-  try {
-    a = new URL(registered);
-    b = new URL(requested);
-  } catch {
-    return false;
-  }
-  if (!isLoopback(a) || !isLoopback(b)) return false;
-  return (
-    a.hostname === b.hostname &&
-    a.pathname === b.pathname &&
-    a.search === b.search &&
-    !b.hash
-  );
-}
-
-/** Validate one redirect URI for registration (RFC 7591 §2, MCP security guidance). */
-function assertValidRedirectUri(raw: string): void {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    throw new OAuthError(
-      "invalid_redirect_uri",
-      `Malformed redirect_uri: ${raw}`,
-    );
-  }
-  if (url.hash) {
-    throw new OAuthError(
-      "invalid_redirect_uri",
-      "redirect_uri must not contain a fragment",
-    );
-  }
-  if (FORBIDDEN_SCHEMES.has(url.protocol)) {
-    throw new OAuthError(
-      "invalid_redirect_uri",
-      `Scheme not allowed: ${url.protocol}`,
-    );
-  }
-  if (url.protocol === "http:" && !isLoopback(url)) {
-    throw new OAuthError(
-      "invalid_redirect_uri",
-      "http redirect URIs are only allowed for loopback addresses; use https",
-    );
-  }
-}
 
 /** RFC 7591 §3.2.1 client information response. */
 export interface ClientInformation {
@@ -125,6 +57,7 @@ export class OAuthClientsService {
   constructor(
     private prisma: PrismaService,
     private config: AppConfig,
+    private cimd: CimdService,
   ) {}
 
   /** RFC 7591 dynamic client registration. */
@@ -224,6 +157,9 @@ export class OAuthClientsService {
   async requireByClientId(clientId: string | undefined): Promise<OAuthClient> {
     if (!clientId)
       throw new OAuthError("invalid_request", "client_id is required");
+    // URL-shaped ids are Client ID Metadata Documents: fetch (or use the
+    // cached copy of) the document instead of looking for a registration.
+    if (isCimdClientId(clientId)) return this.cimd.resolve(clientId);
     const client = await this.findByClientId(clientId);
     if (!client)
       throw new OAuthError("invalid_client", "Unknown client_id", {

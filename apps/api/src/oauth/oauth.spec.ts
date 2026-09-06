@@ -1,6 +1,8 @@
 import { INestApplication } from "@nestjs/common";
 import { TestingModule } from "@nestjs/testing";
 import * as crypto from "crypto";
+import * as nodeHttp from "http";
+import { AddressInfo } from "net";
 import request from "supertest";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
@@ -11,6 +13,7 @@ import {
 import { TestMcpClient } from "../test/mcp-client";
 import { PrismaService } from "../prisma/prisma.service";
 import { ProjectsService } from "../projects/projects.service";
+import { isCimdClientId, isPrivateAddress } from "./cimd.service";
 
 const ISSUER = "http://localhost:3021";
 const CALLBACK = "https://claude.ai/api/mcp/auth_callback";
@@ -36,6 +39,7 @@ describe("MCP OAuth authorization server (integration)", () => {
   let clientId: string;
 
   const http = () => request(app.getHttpServer());
+  const http_ = http;
 
   /** Runs authorize → consent(allow) and returns the code + redirect URL. */
   async function authorizeAndConsent(opts: {
@@ -524,14 +528,11 @@ describe("MCP OAuth authorization server (integration)", () => {
         resource: `${ISSUER}/v1/mcp/${projectSlug}`,
       });
 
-      const refreshed = await http()
-        .post("/v1/oauth/token")
-        .type("form")
-        .send({
-          grant_type: "refresh_token",
-          client_id: clientId,
-          refresh_token: first.refresh_token,
-        });
+      const refreshed = await http().post("/v1/oauth/token").type("form").send({
+        grant_type: "refresh_token",
+        client_id: clientId,
+        refresh_token: first.refresh_token,
+      });
       expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
       expect(refreshed.body.refresh_token).not.toBe(first.refresh_token);
       expect(refreshed.body.access_token).not.toBe(first.access_token);
@@ -543,14 +544,11 @@ describe("MCP OAuth authorization server (integration)", () => {
       );
       expect((await mcp.rpc("tools/list")).status).toBe(200);
 
-      const reuse = await http()
-        .post("/v1/oauth/token")
-        .type("form")
-        .send({
-          grant_type: "refresh_token",
-          client_id: clientId,
-          refresh_token: first.refresh_token,
-        });
+      const reuse = await http().post("/v1/oauth/token").type("form").send({
+        grant_type: "refresh_token",
+        client_id: clientId,
+        refresh_token: first.refresh_token,
+      });
       expect(reuse.status).toBe(400);
       expect(reuse.body.error).toBe("invalid_grant");
 
@@ -559,14 +557,11 @@ describe("MCP OAuth authorization server (integration)", () => {
     });
 
     it("returns invalid_grant for an unknown refresh token", async () => {
-      const res = await http()
-        .post("/v1/oauth/token")
-        .type("form")
-        .send({
-          grant_type: "refresh_token",
-          client_id: clientId,
-          refresh_token: "lrmr_nope",
-        });
+      const res = await http().post("/v1/oauth/token").type("form").send({
+        grant_type: "refresh_token",
+        client_id: clientId,
+        refresh_token: "lrmr_nope",
+      });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("invalid_grant");
     });
@@ -582,6 +577,198 @@ describe("MCP OAuth authorization server (integration)", () => {
   });
 
   // ---------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+
+  describe("client id metadata documents (CIMD)", () => {
+    let docServer: nodeHttp.Server;
+    let docUrl: string;
+    let docHits = 0;
+    let docBody: Record<string, unknown> = {};
+
+    beforeAll(async () => {
+      docServer = nodeHttp.createServer((req, res) => {
+        docHits++;
+        if (req.url === "/client.json") {
+          res.setHeader("content-type", "application/json");
+          res.end(JSON.stringify({ ...docBody, client_id: docUrl }));
+        } else if (req.url === "/mismatch.json") {
+          res.setHeader("content-type", "application/json");
+          res.end(
+            JSON.stringify({
+              ...docBody,
+              client_id: "https://elsewhere.example/x",
+            }),
+          );
+        } else {
+          res.statusCode = 404;
+          res.end();
+        }
+      });
+      await new Promise<void>((r) => docServer.listen(0, "127.0.0.1", r));
+      const port = (docServer.address() as AddressInfo).port;
+      docUrl = `http://127.0.0.1:${port}/client.json`;
+      docBody = {
+        client_name: "CIMD Client",
+        client_uri: "https://cimd.example",
+        redirect_uris: [CALLBACK, "http://localhost/callback"],
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+        token_endpoint_auth_method: "none",
+      };
+    });
+
+    afterAll(async () => {
+      await new Promise<void>((r) => docServer.close(() => r()));
+    });
+
+    const authorizeParams = (clientId: string, challenge: string) => ({
+      response_type: "code",
+      client_id: clientId,
+      redirect_uri: CALLBACK,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      state: "cimd",
+      resource: `${ISSUER}/v1/mcp/${projectSlug}`,
+    });
+
+    it("advertises support in the authorization server metadata", async () => {
+      const res = await http_().get("/.well-known/oauth-authorization-server");
+      expect(res.body.client_id_metadata_document_supported).toBe(true);
+    });
+
+    it("recognises URL client ids and non-routable addresses", () => {
+      expect(isCimdClientId("https://claude.ai/oauth/client-metadata")).toBe(
+        true,
+      );
+      expect(isCimdClientId("https://claude.ai/")).toBe(false);
+      expect(isCimdClientId("https://claude.ai/x#frag")).toBe(false);
+      expect(isCimdClientId("0462537b-d108-436e-b03f-7ca51678f879")).toBe(
+        false,
+      );
+      for (const ip of [
+        "127.0.0.1",
+        "10.1.2.3",
+        "172.16.0.1",
+        "192.168.1.1",
+        "169.254.169.254",
+        "100.64.0.1",
+        "0.0.0.0",
+        "::1",
+        "fc00::1",
+        "fe80::1",
+        "::ffff:10.0.0.1",
+      ]) {
+        expect(isPrivateAddress(ip), ip).toBe(true);
+      }
+      for (const ip of ["8.8.8.8", "160.79.104.10", "2606:4700::1111"]) {
+        expect(isPrivateAddress(ip), ip).toBe(false);
+      }
+    });
+
+    it("runs the whole flow with a metadata-document client and no secret", async () => {
+      const { verifier, challenge } = pkce();
+      const params = authorizeParams(docUrl, challenge);
+
+      const auth = await http_().get("/v1/oauth/authorize").query(params);
+      expect(auth.status, JSON.stringify(auth.body)).toBe(302);
+      expect(auth.headers.location).toContain(
+        "http://localhost:3020/authorize?",
+      );
+
+      const ctx = await http_()
+        .get("/v1/oauth/consent")
+        .set("Cookie", cookie)
+        .query(params);
+      expect(ctx.status).toBe(200);
+      expect(ctx.body.client.name).toBe("CIMD Client");
+
+      const consent = await http_()
+        .post("/v1/oauth/consent")
+        .set("Cookie", cookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ decision: "allow", permissions: "READ_WRITE", ...params });
+      expect(consent.status, JSON.stringify(consent.body)).toBe(200);
+      const code = new URL(consent.body.redirect).searchParams.get("code")!;
+
+      const token = await http_()
+        .post("/v1/oauth/token")
+        .type("form")
+        .send({
+          grant_type: "authorization_code",
+          client_id: docUrl,
+          code,
+          code_verifier: verifier,
+          redirect_uri: CALLBACK,
+          resource: `${ISSUER}/v1/mcp/${projectSlug}`,
+        });
+      expect(token.status, JSON.stringify(token.body)).toBe(200);
+
+      const mcp = new TestMcpClient(
+        app,
+        `/v1/mcp/${projectSlug}`,
+        token.body.access_token,
+      );
+      expect(await mcp.listTools()).toContain("get_project");
+
+      const list = await http_()
+        .get(`/v1/projects/${projectSlug}/connections`)
+        .set("Cookie", cookie);
+      expect(
+        list.body.some(
+          (c: { client: { name: string } }) => c.client.name === "CIMD Client",
+        ),
+      ).toBe(true);
+
+      // Refresh works for the public client too.
+      const refreshed = await http_()
+        .post("/v1/oauth/token")
+        .type("form")
+        .send({
+          grant_type: "refresh_token",
+          client_id: docUrl,
+          refresh_token: token.body.refresh_token,
+        });
+      expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    });
+
+    it("caches the document instead of refetching on every request", async () => {
+      const before = docHits;
+      const { challenge } = pkce();
+      for (let i = 0; i < 3; i++) {
+        const res = await http_()
+          .get("/v1/oauth/authorize")
+          .query(authorizeParams(docUrl, challenge));
+        expect(res.status).toBe(302);
+      }
+      expect(docHits).toBe(before);
+    });
+
+    it("rejects a document whose client_id does not match its URL", async () => {
+      const { challenge } = pkce();
+      const bad = docUrl.replace("client.json", "mismatch.json");
+      const res = await http_()
+        .get("/v1/oauth/authorize")
+        .query(authorizeParams(bad, challenge));
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe("invalid_client");
+      expect(res.body.error_description).toContain("does not match");
+    });
+
+    it("rejects an unreachable document", async () => {
+      const { challenge } = pkce();
+      const res = await http_()
+        .get("/v1/oauth/authorize")
+        .query(
+          authorizeParams(
+            docUrl.replace("client.json", "nope.json"),
+            challenge,
+          ),
+        );
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe("invalid_client");
+    });
+  });
 
   describe("connections (connected apps)", () => {
     it("lists and revokes connections from project settings", async () => {

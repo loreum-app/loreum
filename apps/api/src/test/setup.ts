@@ -20,3 +20,4 @@ process.env.PUBLIC_API_URL = "http://localhost:3021";
 process.env.WEB_URL = "http://localhost:3020";
 process.env.BILLING_ENABLED = "false";
 process.env.THROTTLE_DISABLED = "true";
+process.env.OAUTH_CIMD_ALLOW_INSECURE = "true";

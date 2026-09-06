@@ -110,11 +110,12 @@ export default function McpDocsPage() {
             holds.
           </p>
           <p className="text-sm text-muted-foreground">
-            Under the hood this is standard OAuth 2.1: dynamic client
-            registration, PKCE (S256), short-lived access tokens, rotating
-            refresh tokens, and tokens bound to exactly one world&apos;s URL. A
-            token issued for one world is rejected by every other world&apos;s
-            URL, even on the same account.
+            Under the hood this is standard OAuth 2.1: client ID metadata
+            documents (the recommended way for apps to identify themselves) or
+            dynamic client registration, PKCE (S256), short-lived access tokens,
+            rotating refresh tokens, and tokens bound to exactly one
+            world&apos;s URL. A token issued for one world is rejected by every
+            other world&apos;s URL, even on the same account.
           </p>
         </section>
 
@@ -129,8 +130,9 @@ export default function McpDocsPage() {
               Open Claude → Settings → Connectors → <b>Add custom connector</b>.
             </li>
             <li>
-              Paste your world&apos;s MCP URL. Leave the OAuth client ID and
-              secret empty.
+              Paste your world&apos;s MCP URL. Under OAuth client, keep
+              &quot;Use Anthropic&apos;s hosted client metadata&quot; (the
+              recommended option; Loreum supports it).
             </li>
             <li>
               Click Connect and approve access on the Loreum page that opens.

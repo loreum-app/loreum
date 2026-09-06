@@ -82,6 +82,12 @@ export class AppConfig {
       /** Dynamically registered client secrets expire after this (0 = never). */
       clientSecretTtlSeconds: 0,
       /**
+       * Tests only: let Client ID Metadata Documents be fetched over http from
+       * loopback addresses. Never enable in production.
+       */
+      cimdAllowInsecure:
+        this.configService.get("OAUTH_CIMD_ALLOW_INSECURE") === "true",
+      /**
        * Redirect URIs accepted for any client even if not in its registration
        * (operator-controlled escape hatch, comma separated).
        */
