@@ -11,7 +11,14 @@ export interface JsonRpcResponse {
   jsonrpc: "2.0";
   id: number | string | null;
   result?: Record<string, unknown> & {
-    tools?: { name: string; annotations?: Record<string, unknown> }[];
+    tools?: {
+      name: string;
+      description?: string;
+      inputSchema?: {
+        properties?: Record<string, { description?: string }>;
+      };
+      annotations?: Record<string, unknown>;
+    }[];
     content?: { type: string; text: string }[];
     isError?: boolean;
     serverInfo?: { name: string; version: string };

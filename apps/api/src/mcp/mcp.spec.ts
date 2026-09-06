@@ -58,6 +58,7 @@ describe("MCP endpoint (integration)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let module: TestingModule;
+  let userId: string;
   let projectSlug: string;
   let otherProjectSlug: string;
   let readWriteKey: string;
@@ -73,6 +74,7 @@ describe("MCP endpoint (integration)", () => {
     const { user } = await createAuthenticatedUser(prisma, module, {
       email: "mcp-test@example.com",
     });
+    userId = user.id;
     const projectsService = module.get(ProjectsService);
     const apiKeysService = module.get(ApiKeysService);
 
@@ -250,11 +252,52 @@ describe("MCP endpoint (integration)", () => {
     it("orients with get_project", async () => {
       const res = await rw.call<{
         name: string;
+        timeline: { mode: string; dateGuide: string };
         counts: { entities: Record<string, number> };
       }>("get_project");
       expect(res.ok).toBe(true);
       expect(res.data.name).toBe("MCP Test World");
       expect(res.data.counts).toBeDefined();
+      expect(res.data.timeline.mode).toBe("standard");
+      expect(res.data.timeline.dateGuide).toContain("YYYY-MM-DD");
+      expect(res.data.timeline.dateGuide).toContain("calendar years");
+    });
+
+    it("explains custom-calendar date fields in get_project", async () => {
+      await module
+        .get(ProjectsService)
+        .saveTimelineConfig(otherProjectSlug, userId, {
+          timelineMode: "custom",
+          timelineStart: 35000,
+          timelineEnd: 36000,
+          timelineLabelPrefix: "Year ",
+          timelineLabelSuffix: " AE",
+        });
+      const other = new TestMcpClient(
+        app,
+        `/v1/mcp/${otherProjectSlug}`,
+        otherProjectKey,
+      );
+      const res = await other.call<{
+        timeline: { mode: string; dateGuide: string };
+      }>("get_project");
+      expect(res.ok).toBe(true);
+      expect(res.data.timeline.mode).toBe("custom");
+      expect(res.data.timeline.dateGuide).toContain("dateValue");
+      expect(res.data.timeline.dateGuide).toContain("between 35000 and 36000");
+      expect(res.data.timeline.dateGuide).toContain('"Year 35000 AE"');
+    });
+
+    it("points timeline write tools at the date guide", async () => {
+      const tools = await rw.listToolsFull();
+      const byName = new Map(tools.map((t) => [t.name, t]));
+      for (const name of ["create_timeline_event", "create_era"]) {
+        expect(byName.get(name)?.description).toContain("timeline.dateGuide");
+      }
+      const props = byName.get("create_timeline_event")!.inputSchema!
+        .properties!;
+      expect(props.date?.description).toContain("YYYY-MM-DD");
+      expect(props.dateValue?.description).toContain("custom-calendar");
     });
 
     it("creates entities with tags, relationships, and reads them back", async () => {

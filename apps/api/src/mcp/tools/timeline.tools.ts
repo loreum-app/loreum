@@ -24,27 +24,28 @@ function shapeEvent<
   };
 }
 
+const DATE_GUIDE_HINT =
+  "Format depends on the world's calendar mode: see get_project → timeline.dateGuide.";
+const DATE_DESCRIPTION = `When the event happens. ISO YYYY-MM-DD in standard-calendar worlds; a display label in custom-calendar worlds. ${DATE_GUIDE_HINT}`;
+
 const eventFields = {
   description: z.string().optional(),
-  date: z
-    .string()
-    .max(100)
-    .optional()
-    .describe(
-      "Display date in the world's own calendar, e.g. 'TA 3019-03-25' or 'Year 412 of the Empire'",
-    ),
+  date: z.string().max(100).optional().describe(DATE_DESCRIPTION),
   dateValue: z
     .number()
     .optional()
     .describe(
-      "Numeric position on the timeline for ordering/gantt (see get_project timeline settings)",
+      `Numeric timeline position; custom-calendar worlds only, omit otherwise. ${DATE_GUIDE_HINT}`,
     ),
   endDate: z
     .string()
     .max(100)
     .optional()
-    .describe("Display end date for events that span time"),
-  endDateValue: z.number().optional(),
+    .describe("End of a spanning event, same format as date"),
+  endDateValue: z
+    .number()
+    .optional()
+    .describe("End of a spanning event, same rules as dateValue"),
   sortOrder: z
     .number()
     .int()
@@ -119,17 +120,12 @@ export function registerTimelineTools(
     "create_timeline_event",
     {
       title: "Create timeline event",
-      description:
-        "Add an event to the world's history. sortOrder defaults to the end of the timeline. Link the entities involved with entitySlugs.",
+      description: `Add an event to the world's history. sortOrder defaults to the end of the timeline. Link the entities involved with entitySlugs. ${DATE_GUIDE_HINT}`,
       access: "write",
       input: z.object({
         ...eventFields,
         name: z.string().min(1).max(200),
-        date: z
-          .string()
-          .min(1)
-          .max(100)
-          .describe("Display date in the world's own calendar"),
+        date: z.string().min(1).max(100).describe(DATE_DESCRIPTION),
       }),
     },
     async (input) => {
@@ -190,8 +186,7 @@ export function registerTimelineTools(
     "create_era",
     {
       title: "Create era",
-      description:
-        "Define a named period of history spanning numeric timeline positions startDate..endDate.",
+      description: `Define a named period of history spanning startDate..endDate. ${DATE_GUIDE_HINT}`,
       access: "write",
       input: z.object({
         name: z.string().min(1).max(100),
@@ -203,10 +198,12 @@ export function registerTimelineTools(
           .describe("Hex color for the timeline, e.g. #7c3aed"),
         startDate: z
           .number()
-          .describe("Numeric timeline position where the era begins"),
+          .describe(
+            "Where the era begins: a calendar year in standard-calendar worlds, a numeric position in custom-calendar worlds",
+          ),
         endDate: z
           .number()
-          .describe("Numeric timeline position where the era ends"),
+          .describe("Where the era ends, same scale as startDate"),
         sortOrder: z.number().int().optional(),
       }),
     },
