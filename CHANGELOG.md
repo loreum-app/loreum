@@ -4,6 +4,12 @@
 
 ## [0.2.0] - 2026-09-05
 
+### Toolchain
+
+- pnpm 12, Node >= 22.12 (CommonJS API now `require()`s NestJS 12's ESM packages).
+- NestJS 12, TypeScript 6.0, ESLint 10, Vitest 5, bullmq 6 (+ `ioredis`), lucide-react 1.x, react-day-picker 10, Next 16.3, React 19.2.8, Prisma 7.10 (Prisma 8 is still a release candidate).
+- `eslint-plugin-react` removed from the shared config (no ESLint 10 release); Next and react-hooks plugins remain. TypeScript 7 is held back until typescript-eslint supports it.
+
 ### MCP: OAuth connectors, SDK v2, full tool surface
 
 - **Per-project MCP URL** `/v1/mcp/:projectSlug`; the URL is the OAuth resource so tokens for one world are rejected by every other world. Legacy `/v1/mcp` kept for API keys.
