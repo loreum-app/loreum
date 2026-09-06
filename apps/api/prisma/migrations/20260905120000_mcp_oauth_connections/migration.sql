@@ -1,4 +1,3 @@
-[dotenv@17.3.1] injecting env (14) from .env -- tip: 🤖 agentic secret storage: https://dotenvx.com/as2
 -- CreateEnum
 CREATE TYPE "Plan" AS ENUM ('FREE', 'PRO', 'TEAM');
 
