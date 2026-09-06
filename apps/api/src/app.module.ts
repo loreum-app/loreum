@@ -1,11 +1,15 @@
 import { Module } from "@nestjs/common";
 import { EventEmitterModule } from "@nestjs/event-emitter";
-import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
 import { AppConfigModule } from "./config/config.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { ApiKeysModule } from "./api-keys/api-keys.module";
+import { OAuthModule } from "./oauth/oauth.module";
+import { BillingModule } from "./billing/billing.module";
+import { SearchModule } from "./search/search.module";
+import { AppThrottlerGuard } from "./common/guards/app-throttler.guard";
 import { QueueModule } from "./queue/queue.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { EntityTypesModule } from "./entity-types/entity-types.module";
@@ -15,6 +19,7 @@ import { RelationshipsModule } from "./relationships/relationships.module";
 import { TimelineModule } from "./timeline/timeline.module";
 import { LoreModule } from "./lore/lore.module";
 import { StoryboardModule } from "./storyboard/storyboard.module";
+import { McpModule } from "./mcp/mcp.module";
 import { AppController } from "./app.controller";
 
 @Module({
@@ -31,9 +36,11 @@ import { AppController } from "./app.controller";
       ],
     }),
 
-    // Auth
+    // Auth + plans
     AuthModule,
     ApiKeysModule,
+    BillingModule,
+    OAuthModule,
 
     // Queue (centralized — imports domain modules for processor dispatch)
     QueueModule,
@@ -47,10 +54,11 @@ import { AppController } from "./app.controller";
     TimelineModule,
     LoreModule,
     StoryboardModule,
-    // SearchModule,
+    SearchModule,
+    McpModule,
     // GraphModule,
   ],
   controllers: [AppController],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [{ provide: APP_GUARD, useClass: AppThrottlerGuard }],
 })
 export class AppModule {}

@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateLoreArticleDto } from './dto/create-lore-article.dto';
-import { UpdateLoreArticleDto } from './dto/update-lore-article.dto';
-import { generateUniqueSlug } from '../common/utils/slug';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateLoreArticleDto } from "./dto/create-lore-article.dto";
+import { UpdateLoreArticleDto } from "./dto/update-lore-article.dto";
+import { generateUniqueSlug } from "../common/utils/slug";
 
 const articleInclude = {
   entities: {
@@ -31,15 +31,12 @@ export class LoreService {
   async create(projectId: string, dto: CreateLoreArticleDto) {
     const slug = await generateUniqueSlug(
       this.prisma,
-      'loreArticle',
+      "loreArticle",
       dto.title,
       projectId,
     );
 
-    const entityIds = await this.resolveEntitySlugs(
-      projectId,
-      dto.entitySlugs,
-    );
+    const entityIds = await this.resolveEntitySlugs(projectId, dto.entitySlugs);
 
     const tagIds = await this.resolveTagNames(projectId, dto.tags);
 
@@ -72,7 +69,7 @@ export class LoreService {
     }
 
     if (filters?.q) {
-      where.title = { contains: filters.q, mode: 'insensitive' };
+      where.title = { contains: filters.q, mode: "insensitive" };
     }
 
     if (filters?.entity) {
@@ -83,7 +80,7 @@ export class LoreService {
 
     return this.prisma.loreArticle.findMany({
       where,
-      orderBy: { title: 'asc' },
+      orderBy: { title: "asc" },
       select: {
         id: true,
         title: true,
@@ -102,7 +99,7 @@ export class LoreService {
     });
 
     if (!article) {
-      throw new NotFoundException('Lore article not found');
+      throw new NotFoundException("Lore article not found");
     }
 
     return article;
@@ -119,7 +116,7 @@ export class LoreService {
       data.title = dto.title;
       data.slug = await generateUniqueSlug(
         this.prisma,
-        'loreArticle',
+        "loreArticle",
         dto.title,
         projectId,
         article.id,
@@ -160,13 +157,29 @@ export class LoreService {
     });
   }
 
+  /** Resolve tag names to ids, creating tags that do not exist yet. */
   private async resolveTagNames(
     projectId: string,
     names?: string[],
   ): Promise<string[]> {
-    if (!names?.length) return [];
+    const wanted = [
+      ...new Set((names ?? []).map((n) => n.trim()).filter(Boolean)),
+    ];
+    if (!wanted.length) return [];
+    const existing = await this.prisma.tag.findMany({
+      where: { projectId, name: { in: wanted } },
+      select: { name: true },
+    });
+    const known = new Set(existing.map((t) => t.name));
+    const missing = wanted.filter((n) => !known.has(n));
+    if (missing.length) {
+      await this.prisma.tag.createMany({
+        data: missing.map((name) => ({ projectId, name })),
+        skipDuplicates: true,
+      });
+    }
     const tags = await this.prisma.tag.findMany({
-      where: { projectId, name: { in: names } },
+      where: { projectId, name: { in: wanted } },
       select: { id: true },
     });
     return tags.map((t) => t.id);

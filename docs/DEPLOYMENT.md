@@ -33,6 +33,10 @@ DATABASE_URL=postgresql://...
 REDIS_URL=redis://...
 JWT_SECRET=
 CSRF_SECRET=
+# MCP / OAuth: the exact public origins clients use (HTTPS in production)
+PUBLIC_API_URL=https://api.loreum.app
+WEB_URL=https://loreum.app
+BILLING_ENABLED=false
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 DISCORD_CLIENT_ID=
@@ -63,7 +67,7 @@ pnpm build
 pnpm --filter api db:migrate
 
 # Start production
-pnpm --filter api start:prod
+pnpm --filter api start
 pnpm --filter web start
 ```
 
@@ -79,6 +83,18 @@ Production deployment is handled by a separate private repository that:
 4. Runs database migrations
 
 This separation keeps deployment secrets and infrastructure config out of the open source codebase.
+
+## Smoke testing the MCP endpoint
+
+After a deploy, confirm discovery and the auth challenge from outside:
+
+```sh
+curl -s https://api.loreum.app/.well-known/oauth-authorization-server | jq .issuer
+curl -s https://api.loreum.app/.well-known/oauth-protected-resource/v1/mcp/<slug> | jq .resource
+curl -si -X POST https://api.loreum.app/v1/mcp/<slug> -H 'content-type: application/json'   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | grep -i www-authenticate
+```
+
+`PUBLIC_API_URL` must equal the origin in those URLs exactly, or claude.ai will reject the metadata. For a full local check, `pnpm --filter api exec tsx scripts/smoke-fixture.ts` prints a project slug and API key you can point any MCP client at.
 
 ## Health Checks
 

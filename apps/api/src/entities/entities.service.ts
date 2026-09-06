@@ -4,6 +4,11 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CreateEntityDto } from "./dto/create-entity.dto";
 import { UpdateEntityDto } from "./dto/update-entity.dto";
 import { generateUniqueSlug } from "../common/utils/slug";
+import {
+  assertItemTypeInProject,
+  assertMapInProject,
+  assertOrganizationInProject,
+} from "../common/utils/project-refs";
 
 const listInclude = {
   character: true,
@@ -72,7 +77,21 @@ const hubInclude = {
 export class EntitiesService {
   constructor(private prisma: PrismaService) {}
 
+  private async assertReferences(
+    projectId: string,
+    dto: CreateEntityDto | UpdateEntityDto,
+  ) {
+    await assertItemTypeInProject(this.prisma, projectId, dto.item?.itemTypeId);
+    await assertMapInProject(this.prisma, projectId, dto.location?.mapId);
+    await assertOrganizationInProject(
+      this.prisma,
+      projectId,
+      dto.organization?.parentOrgId,
+    );
+  }
+
   async create(projectId: string, dto: CreateEntityDto) {
+    await this.assertReferences(projectId, dto);
     const slug = await generateUniqueSlug(
       this.prisma,
       "entity",
@@ -118,17 +137,53 @@ export class EntitiesService {
           data: {
             entityId: entity.id,
             itemTypeId: dto.item?.itemTypeId,
-  
+
             fields: (dto.item?.fields ?? {}) as Prisma.InputJsonValue,
           },
         });
         break;
     }
 
+    const tagIds = await this.resolveTagNames(projectId, dto.tags);
+    if (tagIds.length) {
+      await this.prisma.entityTag.createMany({
+        data: tagIds.map((tagId) => ({ entityId: entity.id, tagId })),
+        skipDuplicates: true,
+      });
+    }
+
     return this.prisma.entity.findUniqueOrThrow({
       where: { id: entity.id },
       include: listInclude,
     });
+  }
+
+  /** Resolve tag names to ids, creating tags that do not exist yet. */
+  private async resolveTagNames(
+    projectId: string,
+    names?: string[],
+  ): Promise<string[]> {
+    const wanted = [
+      ...new Set((names ?? []).map((n) => n.trim()).filter(Boolean)),
+    ];
+    if (!wanted.length) return [];
+    const existing = await this.prisma.tag.findMany({
+      where: { projectId, name: { in: wanted } },
+      select: { id: true, name: true },
+    });
+    const known = new Set(existing.map((t) => t.name));
+    const missing = wanted.filter((n) => !known.has(n));
+    if (missing.length) {
+      await this.prisma.tag.createMany({
+        data: missing.map((name) => ({ projectId, name })),
+        skipDuplicates: true,
+      });
+    }
+    const all = await this.prisma.tag.findMany({
+      where: { projectId, name: { in: wanted } },
+      select: { id: true },
+    });
+    return all.map((t) => t.id);
   }
 
   async findAllByProject(
@@ -180,6 +235,7 @@ export class EntitiesService {
 
   async update(projectId: string, slug: string, dto: UpdateEntityDto) {
     const entity = await this.findBySlug(projectId, slug);
+    await this.assertReferences(projectId, dto);
 
     const data: Record<string, unknown> = {};
     if (dto.summary !== undefined) data.summary = dto.summary;
@@ -204,6 +260,19 @@ export class EntitiesService {
       where: { id: entity.id },
       data,
     });
+
+    if (dto.tags !== undefined) {
+      const tagIds = await this.resolveTagNames(projectId, dto.tags);
+      await this.prisma.entityTag.deleteMany({
+        where: { entityId: entity.id },
+      });
+      if (tagIds.length) {
+        await this.prisma.entityTag.createMany({
+          data: tagIds.map((tagId) => ({ entityId: entity.id, tagId })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     // Extension table upserts
     if (dto.character) {
@@ -238,7 +307,7 @@ export class EntitiesService {
         },
         update: {
           itemTypeId: dto.item.itemTypeId,
-           
+
           ...(dto.item.fields !== undefined
             ? { fields: (dto.item.fields ?? {}) as Prisma.InputJsonValue }
             : {}),

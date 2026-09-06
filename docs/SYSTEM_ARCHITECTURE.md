@@ -25,7 +25,7 @@ C4Context
 
     Rel(author, loreum, "Creates worlds, entities, stories", "HTTPS")
     Rel(reader, loreum, "Reads public wikis", "HTTPS")
-    Rel(ai, loreum, "Queries/mutates world data", "MCP over stdio")
+    Rel(ai, loreum, "Queries/mutates world data", "MCP over Streamable HTTP")
     Rel(loreum, google, "OAuth2 login", "HTTPS")
     Rel(loreum, cloudflare, "CDN, file storage, DNS", "HTTPS")
     Rel(loreum, resend, "Sends email", "HTTPS")
@@ -48,7 +48,7 @@ graph TB
         API["NestJS API<br/>(port 3021)"]
         WS["WebSocket Gateway<br/>(NestJS, same process)"]
         WORKERS["BullMQ Workers<br/>(same process)"]
-        MCP["MCP Server<br/>(stdio transport)"]
+        MCP["MCP Endpoint + OAuth AS<br/>(/v1/mcp/:project, same process)"]
     end
 
     subgraph Data
@@ -68,7 +68,7 @@ graph TB
     WEB -- "REST API" --> API
     WEB -- "Notifications (push)" --> WS
     WEB -. "Yjs CRDT sync (planned)" .-> WS
-    MCP -- "REST API (bearer auth)" --> API
+    MCP -- "Domain services (in-process)" --> API
 
     API --> PG
     API --> REDIS
@@ -88,16 +88,16 @@ graph TB
 
 ### Component Responsibilities
 
-| Component             | Role                                                                                                                                                                               |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Next.js Frontend**  | SSR/CSR web app. Auth UI, project workspace, entity editor, relationship graph, timeline, storyboard.                                                                              |
-| **NestJS API**        | REST API. Auth (Google OAuth + JWT), CRUD for all domain models, Swagger docs at `/docs`.                                                                                          |
-| **WebSocket Gateway** | **Current:** one-way push notifications (entity/storyboard update events). **Planned:** bidirectional collaborative editing via Yjs CRDT provider. Runs inside the NestJS process. |
-| **BullMQ Workers**    | Async job processing — search indexing, email dispatch, AI tasks. Centralized QueueModule; domain modules emit events, processors call domain services.                            |
-| **MCP Server**        | Model Context Protocol server for AI assistants. Exposes tools (`search_project`, `get_entity`, `create_entity`, etc.) over stdio, proxying to the REST API with bearer auth.      |
-| **PostgreSQL**        | Primary data store. Prisma ORM with migrations.                                                                                                                                    |
-| **Redis**             | BullMQ job queue, session cache, rate limiting.                                                                                                                                    |
-| **OpenSearch**        | Full-text search across entities, lore articles, timeline events.                                                                                                                  |
+| Component             | Role                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Next.js Frontend**  | SSR/CSR web app. Auth UI, project workspace, entity editor, relationship graph, timeline, storyboard.                                                                                                                                                                                                                                                                                             |
+| **NestJS API**        | REST API. Auth (Google OAuth + JWT), CRUD for all domain models, Swagger docs at `/docs`.                                                                                                                                                                                                                                                                                                         |
+| **WebSocket Gateway** | **Current:** one-way push notifications (entity/storyboard update events). **Planned:** bidirectional collaborative editing via Yjs CRDT provider. Runs inside the NestJS process.                                                                                                                                                                                                                |
+| **BullMQ Workers**    | Async job processing — search indexing, email dispatch, AI tasks. Centralized QueueModule; domain modules emit events, processors call domain services.                                                                                                                                                                                                                                           |
+| **MCP Endpoint**      | Model Context Protocol server for AI assistants. Stateless Streamable HTTP endpoint at `/v1/mcp/:projectSlug` inside the NestJS process (SDK v2). Tools call domain services directly with the project pinned by the credential. Authenticated by OAuth 2.1 access tokens (Loreum is its own authorization server: `/.well-known/oauth-authorization-server`, `/v1/oauth/*`) or project API keys. |
+| **PostgreSQL**        | Primary data store. Prisma ORM with migrations.                                                                                                                                                                                                                                                                                                                                                   |
+| **Redis**             | BullMQ job queue, session cache, rate limiting.                                                                                                                                                                                                                                                                                                                                                   |
+| **OpenSearch**        | Full-text search across entities, lore articles, timeline events.                                                                                                                                                                                                                                                                                                                                 |
 
 ---
 
@@ -182,17 +182,15 @@ sequenceDiagram
 sequenceDiagram
     actor User
     participant AI as AI Assistant
-    participant MCP as MCP Server
-    participant API as NestJS API
+    participant API as NestJS API (/v1/mcp)
     participant DB as PostgreSQL
 
     User->>AI: "Tell me about the elven kingdoms"
-    AI->>MCP: tools/call search_project
-    MCP->>API: GET /v1/projects/:slug/search?q=elven+kingdoms
-    API->>DB: Full-text search query
+    AI->>API: POST /v1/mcp (tools/call search_project, Bearer key)
+    API->>API: Validate bearer (OAuth token or API key), check audience = project URL
+    API->>DB: Query entities + lore
     DB-->>API: Matching entities + lore
-    API-->>MCP: Search results JSON
-    MCP-->>AI: Tool result
+    API-->>AI: Tool result (JSON-RPC)
     AI-->>User: Summarized answer with world context
 ```
 
@@ -236,8 +234,7 @@ graph TB
 
     subgraph "Application Server"
         NEXT["Next.js<br/>SSR + Static"]
-        NEST["NestJS API<br/>+ WebSocket<br/>+ Workers"]
-        MCP_SRV["MCP Server<br/>(stdio)"]
+        NEST["NestJS API<br/>+ WebSocket<br/>+ Workers<br/>+ MCP endpoint"]
     end
 
     subgraph "Managed Services"
@@ -252,7 +249,7 @@ graph TB
     USER --> DNS --> CDN
     CDN --> NEXT
     CDN --> NEST
-    AI_CLIENT --> MCP_SRV --> NEST
+    AI_CLIENT -- "/v1/mcp" --> CDN
 
     NEST --> PG
     NEST --> REDIS
@@ -264,18 +261,18 @@ graph TB
 
 ### Infrastructure Summary
 
-| Layer           | Technology                | Notes                                                |
-| --------------- | ------------------------- | ---------------------------------------------------- |
-| **DNS + CDN**   | Cloudflare                | Tunnel for origin protection, R2 for file uploads    |
-| **Frontend**    | Next.js 16                | Server-rendered, port 3020                           |
-| **API**         | NestJS                    | REST + WebSocket + BullMQ workers, port 3021         |
-| **MCP**         | @modelcontextprotocol/sdk | stdio transport, separate process                    |
-| **Database**    | PostgreSQL 18             | Prisma ORM, single migration-managed schema          |
-| **Cache/Queue** | Redis 7                   | BullMQ jobs, session store, rate limiting            |
-| **Search**      | OpenSearch 2.14           | Full-text indexing of all content                    |
-| **Storage**     | Cloudflare R2             | Entity images, file uploads                          |
-| **Email**       | Resend                    | Invitations, notifications                           |
-| **Billing**     | Stripe                    | Checkout sessions, webhooks, subscription management |
+| Layer           | Technology                                   | Notes                                                                        |
+| --------------- | -------------------------------------------- | ---------------------------------------------------------------------------- |
+| **DNS + CDN**   | Cloudflare                                   | Tunnel for origin protection, R2 for file uploads                            |
+| **Frontend**    | Next.js 16                                   | Server-rendered, port 3020                                                   |
+| **API**         | NestJS                                       | REST + WebSocket + BullMQ workers, port 3021                                 |
+| **MCP**         | @modelcontextprotocol/server + node (SDK v2) | Streamable HTTP endpoint at `/v1/mcp/:project`, OAuth 2.1 AS, in API process |
+| **Database**    | PostgreSQL 18                                | Prisma ORM, single migration-managed schema                                  |
+| **Cache/Queue** | Redis 7                                      | BullMQ jobs, session store, rate limiting                                    |
+| **Search**      | OpenSearch 2.14                              | Full-text indexing of all content                                            |
+| **Storage**     | Cloudflare R2                                | Entity images, file uploads                                                  |
+| **Email**       | Resend                                       | Invitations, notifications                                                   |
+| **Billing**     | Stripe                                       | Checkout sessions, webhooks, subscription management                         |
 
 ### Local Development
 
@@ -287,4 +284,4 @@ docker compose up -d
 pnpm dev
 ```
 
-This runs PostgreSQL, Redis, and OpenSearch in Docker. The API (3021), web app (3020), and MCP server run natively via Turborepo.
+This runs PostgreSQL, Redis, and OpenSearch in Docker. The API (3021, MCP at `/v1/mcp/<project>`) and web app (3020) run natively via Turborepo.

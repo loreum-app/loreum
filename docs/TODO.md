@@ -14,10 +14,23 @@ Tracked tasks for Loreum. Near-term is the next couple weeks, long-term is every
 - [x] Create open source repo (fresh git history) - https://github.com/Loreum-App/loreum
 - [x] MCP Authentication & API Keys (ApiKey model, service, controller, Bearer token auth, management UI)
 - [x] Broken MCP Endpoints (search stub, entity hub aggregation, storyboard overview)
+- [x] MCP OAuth 2.1 authorization server (DCR, PKCE, per-project audience binding, rotating refresh tokens, consent page, connected-apps UI) — claude.ai / Claude Code / Cursor connect with one URL
+- [x] MCP SDK v2 (protocol 2026-07-28 with 2025-era fallback), per-credential rate limiting
+- [x] MCP read tools (16) + cross-content search, write tools (20) incl. scene prose, tags on entities
+- [x] Cross-project reference checks on raw-id fields (timeline events, scenes, item types, maps, parent orgs)
+- [x] Billing switch (`BILLING_ENABLED`, plan/limits table, dormant by default)
 
 ---
 
 ## Near-Term (Next 2 Weeks)
+
+### MCP follow-ups
+
+- [ ] Client ID Metadata Documents (CIMD) as a registration method alongside DCR (needs an SSRF-hardened fetcher; DCR is deprecated by the 2026-07-28 spec but supported for 12+ months)
+- [ ] Postgres row-level security as a second isolation layer (restricted app DB role + `app.project_id` GUC; needs a prod role provisioning step)
+- [ ] Structured tool output (`outputSchema` / `structuredContent`) once major clients consume it
+- [ ] Response-size caps / pagination on large list tools
+- [ ] Refresh-token grace window for dropped token responses (strict rotation today)
 
 ### MCP Review Queue (Staging Area)
 
@@ -37,36 +50,6 @@ Tracked tasks for Loreum. Near-term is the next couple weeks, long-term is every
 - [ ] Batch accept/reject buttons
 - [ ] Sidebar badge showing pending change count
 - [ ] Notification when new pending changes arrive
-
-### MCP Read Tools + Search (next priority)
-
-See [MCP_IMPLEMENTATION_PLAN.md](MCP_IMPLEMENTATION_PLAN.md) Phase 3 for full context.
-
-**Search** (API work — endpoint exists as stub, needs real implementation):
-
-- [ ] Implement Prisma `contains` search across entities, lore, timeline, scenes
-- [ ] Return unified result format with type labels and excerpts
-
-**Read tools** (MCP-side only — all API endpoints exist):
-
-- [ ] `list_projects` - list user's projects
-- [ ] `get_project` - project detail
-- [ ] `list_relationships` - relationships, optionally filtered by entity
-- [ ] `get_timeline` - timeline events with filters
-- [ ] `get_timeline_event` - single event detail
-- [ ] `list_eras` - eras for a project
-- [ ] `list_lore_articles` - filter lore articles
-- [ ] `get_lore_article` - single lore article
-- [ ] `list_tags` - all tags in a project
-- [ ] `get_plotline` - plotline with plot points
-- [ ] `get_work` - work with chapters and scene structure
-- [ ] `list_scenes` - scenes in a chapter (narrative content)
-
-**Quality pass:**
-
-- [ ] Improve tool descriptions
-- [ ] Response shaping (strip noise, flatten nesting)
-- [ ] `api()` error handling (structured MCP errors)
 
 ### MCP Write Tools (blocked on Review Queue)
 
@@ -202,7 +185,7 @@ See [MCP_IMPLEMENTATION_PLAN.md](MCP_IMPLEMENTATION_PLAN.md) Phase 3 for full co
 - [ ] Offline desktop app - work without internet, sync when reconnected
 - [x] API key generation + bearer auth
 - [ ] REST API documentation page (`/docs/api`)
-- [ ] Rate limiting per API key
+- [x] Rate limiting per API key / credential
 - [ ] Webhook support (entity created/updated/deleted events)
 - [ ] Cultures & species modules - dedicated modules for languages, rituals, value systems, biological traits
 - [ ] Discovery & magic systems - track technologies, magic schools, spells, and their interactions

@@ -2,6 +2,7 @@ import {
   Injectable,
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   UnauthorizedException,
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
@@ -9,8 +10,14 @@ import { Request } from "express";
 import { ApiKeysService } from "../../api-keys/api-keys.service";
 import { AuthUser } from "../types/jwt.types";
 
+const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 /**
  * Combined auth guard: cookie → JWT (Passport), Bearer → API key (SHA-256).
+ *
+ * API keys are scoped to a single project: the route's project slug must
+ * match the key's project, and READ_ONLY keys may only use read methods.
+ * (The MCP endpoint uses its own McpAuthGuard, which also accepts OAuth tokens.)
  */
 @Injectable()
 export class ApiKeyAuthGuard extends AuthGuard("jwt") implements CanActivate {
@@ -32,6 +39,24 @@ export class ApiKeyAuthGuard extends AuthGuard("jwt") implements CanActivate {
 
     const token = authHeader.slice(7);
     const apiKey = await this.apiKeysService.validate(token);
+
+    const params = request.params as Record<string, string | undefined>;
+    const routeProjectSlug = params?.projectSlug ?? params?.slug;
+
+    if (!routeProjectSlug) {
+      throw new ForbiddenException("API keys are scoped to a single project");
+    }
+    if (routeProjectSlug !== apiKey.project.slug) {
+      throw new ForbiddenException(
+        "API key does not grant access to this project",
+      );
+    }
+    if (
+      apiKey.permissions === "READ_ONLY" &&
+      !READ_METHODS.has(request.method)
+    ) {
+      throw new ForbiddenException("This API key is read-only");
+    }
 
     const user: AuthUser = {
       id: apiKey.project.ownerId,

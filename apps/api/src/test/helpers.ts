@@ -1,10 +1,17 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { INestApplication, ValidationPipe } from "@nestjs/common";
+import {
+  INestApplication,
+  RequestMethod,
+  ValidationPipe,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import cookieParser from "cookie-parser";
 import { AppModule } from "../app.module";
 import { PrismaService } from "../prisma/prisma.service";
 import { CookieService } from "../auth/services/cookie.service";
+import { AppConfig } from "../config/app.config";
+import { corsOptionsDelegate } from "../common/cors";
+import { PrismaExceptionFilter } from "../common/filters/prisma-exception.filter";
 
 /**
  * Boots a full NestJS app for integration tests.
@@ -21,8 +28,12 @@ export async function createTestApp(): Promise<{
 
   const app = module.createNestApplication();
 
-  app.setGlobalPrefix("v1");
+  app.setGlobalPrefix("v1", {
+    exclude: [{ path: ".well-known/*path", method: RequestMethod.GET }],
+  });
   app.use(cookieParser());
+  app.enableCors(corsOptionsDelegate(app.get(AppConfig)));
+  app.useGlobalFilters(new PrismaExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

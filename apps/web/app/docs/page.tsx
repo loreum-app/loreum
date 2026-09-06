@@ -86,18 +86,17 @@ const features = [
 const aiIntegration = [
   {
     icon: Bot,
-    title: "MCP Server",
+    title: "Connect AI (MCP)",
     description:
-      "Connect AI assistants to your world. 11 read tools, 16 write tools.",
+      "Connect Claude, Cursor, or any MCP client with one URL. 16 read tools, 20 write tools.",
     href: "/docs/mcp",
   },
   {
     icon: Key,
     title: "API Keys",
     description:
-      "Generate project-scoped keys with read-only or read-write permissions.",
-    href: "/docs/api-keys",
-    status: "coming-soon",
+      "Project-scoped keys with read-only or read-write permissions for scripts and header-only clients.",
+    href: "/docs/mcp#api-keys",
   },
   {
     icon: GitPullRequest,

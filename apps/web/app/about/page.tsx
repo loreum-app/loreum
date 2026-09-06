@@ -83,21 +83,21 @@ const features = [
     icon: Bot,
     title: "AI Integration (MCP)",
     description:
-      "A Model Context Protocol server lets AI assistants like Claude read and write your world data. Search entities, read relationships, browse the timeline, pull the style guide, create characters, add lore articles, and link timeline events. The AI works with your structured world instead of guessing. Free on all tiers. Bring your own AI, bring your own tokens.",
+      "A remote Model Context Protocol server lets Claude, Cursor, and other AI assistants read and write your world data. Connect with one URL per world: the app signs in with your Loreum account and you approve read or read-and-write access. Search entities, read relationships, browse the timeline, create characters, add lore articles, and draft scenes. Free on all tiers. Bring your own AI, bring your own tokens.",
   },
   {
     id: "review-queue",
     icon: GitPullRequest,
-    title: "Review Queue",
+    title: "Review Queue (coming soon)",
     description:
-      "Every AI write operation lands in a staging area instead of modifying your canon directly. You see a diff-style view of each proposed creation, update, or deletion. Accept, edit, or reject each change individually, or batch-accept a full AI session. Changes are grouped by session so you can review them in context. The same mechanism powers collaborator suggestion mode for teams.",
+      "Planned: every AI write operation lands in a staging area instead of modifying your canon directly. You see a diff-style view of each proposed creation, update, or deletion. Accept, edit, or reject each change individually, or batch-accept a full AI session. Changes are grouped by session so you can review them in context. The same mechanism powers collaborator suggestion mode for teams.",
   },
   {
     id: "api-keys",
     icon: Key,
-    title: "API Key Authentication",
+    title: "OAuth Connections & API Keys",
     description:
-      "Generate project-scoped API keys from project settings to connect your MCP client. Each key has a name, permission level (read-only or read-write), and optional expiration. Revoke keys any time. The MCP server authenticates with the key as a Bearer token, and all requests are scoped to the project.",
+      "Apps connect through OAuth 2.1 (PKCE, rotating refresh tokens, tokens bound to a single world) and appear as connected apps you can disconnect any time. For scripts and header-only clients, generate project-scoped API keys with read-only or read-write permissions and optional expiration.",
   },
 ];
 
@@ -136,7 +136,7 @@ const engineeringPoints = [
     icon: Workflow,
     title: "AI-native architecture",
     description:
-      "The MCP server exposes 27 tools across reads and writes. Write tools route through a staging area so AI changes never touch live data without review. The same service layer powers both MCP and the planned hosted AI tier.",
+      "The MCP server exposes 36 tools across reads and writes, all scoped to one world by the credential that calls them. Every tool carries read-only/destructive annotations so clients can confirm before deleting. The same service layer powers both MCP and the planned hosted AI tier.",
   },
 ];
 

@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { generateUniqueSlug } from "../common/utils/slug";
+import {
+  assertSceneInProject,
+  assertTimelineEventInProject,
+} from "../common/utils/project-refs";
 import { CreatePlotlineDto } from "./dto/create-plotline.dto";
 import { CreatePlotPointDto } from "./dto/create-plot-point.dto";
 import { CreateWorkDto } from "./dto/create-work.dto";
@@ -162,6 +166,12 @@ export class StoryboardService {
     dto: CreatePlotPointDto,
   ) {
     const plotline = await this.findPlotlineBySlug(projectId, plotlineSlug);
+    await assertSceneInProject(this.prisma, projectId, dto.sceneId);
+    await assertTimelineEventInProject(
+      this.prisma,
+      projectId,
+      dto.timelineEventId,
+    );
 
     let entityId: string | undefined;
     if (dto.entitySlug) {
@@ -195,6 +205,12 @@ export class StoryboardService {
       where: { id, plotline: { projectId } },
     });
     if (!point) throw new NotFoundException("Plot point not found");
+    await assertSceneInProject(this.prisma, projectId, dto.sceneId);
+    await assertTimelineEventInProject(
+      this.prisma,
+      projectId,
+      dto.timelineEventId,
+    );
 
     const data: Record<string, unknown> = {};
     if (dto.title !== undefined) data.title = dto.title;
@@ -370,6 +386,11 @@ export class StoryboardService {
       where: { id: dto.chapterId, work: { projectId } },
     });
     if (!chapter) throw new NotFoundException("Chapter not found");
+    await assertTimelineEventInProject(
+      this.prisma,
+      projectId,
+      dto.timelineEventId,
+    );
 
     let plotlineId: string | undefined;
     if (dto.plotlineSlug) {
@@ -402,6 +423,7 @@ export class StoryboardService {
         sequenceNumber: dto.sequenceNumber,
         title: dto.title,
         description: dto.description,
+        content: dto.content,
         plotlineId,
         locationId,
         timelineEventId: dto.timelineEventId,
@@ -442,10 +464,16 @@ export class StoryboardService {
       where: { id, chapter: { work: { projectId } } },
     });
     if (!scene) throw new NotFoundException("Scene not found");
+    await assertTimelineEventInProject(
+      this.prisma,
+      projectId,
+      dto.timelineEventId,
+    );
 
     const data: Record<string, unknown> = {};
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
+    if (dto.content !== undefined) data.content = dto.content;
     if (dto.sequenceNumber !== undefined)
       data.sequenceNumber = dto.sequenceNumber;
     if (dto.timelineEventId !== undefined)

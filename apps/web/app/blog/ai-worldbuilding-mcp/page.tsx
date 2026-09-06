@@ -75,58 +75,48 @@ export default function AiWorldbuildingMcpPost() {
         <h3>Create and modify world data</h3>
         <p>
           &quot;Create a new location called the Iron Citadel in the Northern
-          Wastes.&quot; Claude calls the create tool and the proposed entity
-          lands in your review queue. You see a preview of the new entity and
-          can accept, edit, or reject it before it touches your canon.
+          Wastes.&quot; Claude calls the create tool and the location appears in
+          your world, tagged and linked the way you asked. Grant read-only
+          access instead if you want the AI to consult your canon without
+          editing it.
         </p>
 
-        <h2>The Review Queue</h2>
+        <h2>You stay in control</h2>
         <p>
-          Every write operation from the MCP server creates a pending change
-          instead of modifying your world directly. You review these changes
-          from a dedicated staging area in the web UI. Updates show a
-          side-by-side diff. Creates show a full preview. Deletes show what will
-          be removed and what references it.
-        </p>
-        <p>
-          Changes from a single AI session are grouped together, so you can
-          review them in context and batch-accept if you trust the output.
+          Every app you connect is approved by you, for one world, with the
+          access level you choose. Connected apps are listed in the world&apos;s
+          settings and can be disconnected in one click, which immediately
+          invalidates their access. A review queue, where AI-proposed changes
+          wait for your approval with a diff view, is next on the roadmap.
         </p>
 
         <h2>How to set it up</h2>
         <p>
-          Generate an API key from your project settings, then add the MCP
-          server to your Claude Desktop config:
+          Open your world&apos;s settings, copy its MCP URL, and add it as a
+          custom connector in Claude (Settings → Connectors → Add custom
+          connector). Claude sends you to Loreum to sign in and approve, and
+          you&apos;re done. There&apos;s nothing to install and no key to paste.
+          Claude Code works the same way:
         </p>
 
         <pre className="rounded-lg bg-muted p-4 text-sm">
-          {`{
-  "mcpServers": {
-    "loreum": {
-      "command": "node",
-      "args": ["path/to/loreum/apps/mcp/dist/index.js"],
-      "env": {
-        "MCP_API_BASE_URL": "https://api.loreum.app/v1",
-        "MCP_API_TOKEN": "your-api-key"
-      }
-    }
-  }
-}`}
+          {`claude mcp add --transport http loreum https://api.loreum.app/v1/mcp/your-world`}
         </pre>
 
-        <h2>Read tools (11)</h2>
+        <h2>Read tools (16)</h2>
         <p>
           Query your world data: search across all content, get individual
-          entities with their relationships and lore, browse the storyboard,
-          read the timeline, pull the style guide, and list lore articles. These
-          work with both read-only and read-write API keys.
+          entities with their relationships and lore, browse the storyboard down
+          to scene prose, read the timeline and eras, and list lore articles and
+          tags. Available to every connection.
         </p>
 
-        <h2>Write tools (16)</h2>
+        <h2>Write tools (20)</h2>
         <p>
           Create, update, and delete entities, relationships, lore articles,
-          timeline events, scenes, plot points, and the style guide. All writes
-          go through the review queue. Requires a read-write API key.
+          timeline events and eras, plotlines and plot points, works, chapters,
+          and scenes. Only offered to connections you approved with read &amp;
+          write access.
         </p>
 
         <h2>Why this matters</h2>

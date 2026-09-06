@@ -26,7 +26,7 @@
 
 Loreum is a database for fictional worlds. Track characters, relationships, timelines, organizations, maps, lore, and story structure in a purpose-built platform with instant search across everything. No scattered files, no lost notes, no contradictions.
 
-AI plugs into all of it. Connect Claude, Cursor, or any MCP-compatible assistant, and it reads your entire world: entities, relationships, timeline, lore, style guide, and storyboard. It can also propose changes that land in a review queue for you to accept, edit, or reject before anything touches your canon.
+AI plugs into all of it. Connect Claude, Cursor, or any MCP-compatible assistant with one URL per world, approve read or read-and-write access, and it reads your entire world: entities, relationships, timeline, lore, and storyboard. With write access it can create and edit them too; a review queue for AI-proposed changes is next on the roadmap.
 
 **For novelists, screenwriters, game designers, tabletop RPG game masters, comic book writers, and anyone building a fictional universe that needs structure.**
 
@@ -38,9 +38,8 @@ AI plugs into all of it. Connect Claude, Cursor, or any MCP-compatible assistant
 - **Lore Wiki** - Canonical world articles with entity mentions, categories, and tags
 - **Storyboard** - Plotlines, works, chapters, and scenes cross-referenced to your world data
 - **Style Guide** - Voice, tone, POV, pacing, dialogue rules, scene overrides, and per-character voice notes
-- **AI Integration (MCP)** - 11 read tools and 16 write tools so any MCP-compatible AI can query and modify your world
-- **Review Queue** - AI-proposed changes land in a staging area with diff view. Accept, edit, or reject individually or in batch
-- **API Key Auth** - Project-scoped keys with read-only or read-write permissions for MCP authentication
+- **AI Integration (MCP)** - Remote MCP server (SDK v2) with 36 tools; connect claude.ai, Claude Code, Cursor and others with one URL per world
+- **OAuth 2.1 + API Keys** - Built-in authorization server (PKCE, rotating refresh tokens, per-world token binding, connected-apps management) plus project-scoped API keys
 - **Public Wiki** - Share your world as a read-only site while keeping secrets and drafts private
 - **Maps** - Upload map images and pin locations with coordinates
 - **Search** - Full-text search across all content
@@ -60,7 +59,7 @@ AI plugs into all of it. Connect Claude, Cursor, or any MCP-compatible assistant
 | Queue    | BullMQ + Redis 7                          |
 | Auth     | OAuth2 (Google) + JWT with token rotation |
 | Graph    | React Flow (@xyflow/react)                |
-| AI       | MCP protocol (Model Context Protocol)     |
+| AI       | MCP (SDK v2, Streamable HTTP, OAuth 2.1)  |
 | Storage  | Cloudflare R2 (S3-compatible)             |
 | Infra    | Cloudflare CDN + Tunnel                   |
 | Testing  | Vitest, Supertest, GitHub Actions CI      |
@@ -93,36 +92,32 @@ pnpm --filter api db:seed
 pnpm dev
 ```
 
-API: `http://localhost:3021` | Web: `http://localhost:3020` | Swagger: `http://localhost:3021/docs`
+API: `http://localhost:3021` | Web: `http://localhost:3020` | Swagger: `http://localhost:3021/docs` (requires `ENABLE_SWAGGER=true` in `apps/api/.env`)
 
 ## MCP Server
 
-Connect any MCP-compatible AI to read and write your world data. Generate a project-scoped API key from project settings, then configure your client:
+Loreum is a remote MCP server. Every world has its own URL, shown under **Settings → Connect AI**:
 
-```json
-{
-  "mcpServers": {
-    "loreum": {
-      "command": "node",
-      "args": ["path/to/loreum/apps/mcp/dist/index.js"],
-      "env": {
-        "MCP_API_BASE_URL": "https://api.loreum.app/v1",
-        "MCP_API_TOKEN": "your-api-key"
-      }
-    }
-  }
-}
+```
+https://api.loreum.app/v1/mcp/<project-slug>
 ```
 
-All write operations go through the review queue. [Full MCP documentation](https://loreum.app/docs/mcp).
+Paste it into Claude (Settings → Connectors → Add custom connector), Cursor, or Claude Code:
+
+```sh
+claude mcp add --transport http loreum https://api.loreum.app/v1/mcp/<project-slug>
+```
+
+The client sends you to Loreum to sign in and approve read or read-and-write access. No keys to copy. Connected apps are listed in the world's settings and can be disconnected at any time. For scripts and header-only clients, project API keys still work as `Authorization: Bearer lrm_…`.
+
+Self-hosted instances serve the same endpoint at `<PUBLIC_API_URL>/v1/mcp/<project-slug>` and act as their own OAuth 2.1 authorization server. [Full MCP documentation](https://loreum.app/docs/mcp).
 
 ## Project Structure
 
 ```
 apps/
-  api/          NestJS API (Prisma, BullMQ, WebSocket)
+  api/          NestJS API (Prisma, BullMQ, MCP endpoint)
   web/          Next.js frontend (shadcn/ui, React Flow)
-  mcp/          MCP server for AI tool integration
 packages/
   types/        Shared TypeScript interfaces
   ui/           Shared UI components

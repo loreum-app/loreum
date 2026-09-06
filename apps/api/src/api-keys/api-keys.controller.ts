@@ -14,6 +14,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { User } from "../auth/decorators/user.decorator";
 import { AuthUser } from "../auth/types/jwt.types";
 import { ProjectsService } from "../projects/projects.service";
+import { EntitlementsService } from "../billing/entitlements.service";
 import { ApiKeysService } from "./api-keys.service";
 import { CreateApiKeyDto } from "./dto/create-api-key.dto";
 
@@ -25,6 +26,7 @@ export class ApiKeysController {
   constructor(
     private apiKeysService: ApiKeysService,
     private projectsService: ProjectsService,
+    private entitlements: EntitlementsService,
   ) {}
 
   @Post()
@@ -35,6 +37,7 @@ export class ApiKeysController {
     @Body() dto: CreateApiKeyDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
+    await this.entitlements.assertFeature(user.id, "api_keys");
     return this.apiKeysService.create(project.id, user.id, dto);
   }
 

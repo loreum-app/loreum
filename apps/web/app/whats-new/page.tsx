@@ -7,11 +7,12 @@ const releases = [
     title: "AI Integration",
     highlights: [
       "Style guide with voice, tone, POV, pacing, dialogue rules, and character voice notes",
-      "API key authentication for MCP (generate project-scoped keys from settings)",
-      "Review queue: AI-proposed changes land in a staging area with diff view",
-      "Batch accept/reject for reviewing entire AI sessions at once",
-      "Expanded MCP tool surface: timeline, lore, scene, plot point, and style guide tools",
-      "Read and write tools across all world data types",
+      "Connect Claude (web, desktop, mobile), Claude Code, and Cursor with one URL per world via OAuth 2.1",
+      "Connected apps list with one-click disconnect; tokens bound to a single world",
+      "API key authentication for scripts and header-only MCP clients",
+      "36 MCP tools: full read coverage plus writes for entities, relationships, lore, timeline, eras, plotlines, works, chapters, and scenes",
+      "Cross-content search (entities, lore, timeline, scenes) via MCP and REST",
+      "Review queue: AI-proposed changes land in a staging area with diff view (next)",
     ],
   },
   {

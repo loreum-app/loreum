@@ -709,178 +709,109 @@ Authentication required via the same session cookie or bearer token.
 
 ## MCP Server
 
-The MCP server exposes Loreum's worldstate to AI assistants via the [Model Context Protocol](https://modelcontextprotocol.io). It runs as a stdio transport for local integration with Claude Desktop, Claude Code, Cursor, and other MCP-compatible clients.
+Loreum is a remote [Model Context Protocol](https://modelcontextprotocol.io) server built into the API as a stateless Streamable HTTP endpoint (SDK v2, protocol 2026-07-28 with the 2025-era fallback, so every current client works). Each project has its own URL, which is also the OAuth resource identifier:
 
-### Connection
+```
+https://api.loreum.app/v1/mcp/<project-slug>
+```
+
+Self-hosted instances serve the same endpoint at `${PUBLIC_API_URL}/v1/mcp/<project-slug>`. The older project-less URL `/v1/mcp` still accepts API keys.
+
+### Authentication
+
+Two credentials are accepted as `Authorization: Bearer …`:
+
+| Credential         | Prefix  | How you get it                                                                    | Notes                                                                               |
+| ------------------ | ------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| OAuth access token | `lrma_` | The MCP client runs the OAuth 2.1 flow; the user approves in the web consent page | Bound to one project URL (RFC 8707). Rejected everywhere else, including `/v1/mcp`. |
+| Project API key    | `lrm_`  | Settings → API keys                                                               | For scripts / header-only clients. Must match the project in the URL.               |
+
+Unauthenticated or invalid requests get `401` with
+
+```
+WWW-Authenticate: Bearer realm="loreum", error="invalid_token", resource_metadata="https://api.loreum.app/.well-known/oauth-protected-resource/v1/mcp/<slug>"
+```
+
+which is how claude.ai, Claude Code, Cursor and other clients discover the authorization server automatically.
+
+Permissions are `READ_ONLY` or `READ_WRITE` (OAuth scopes `read` / `write`), chosen by the user at consent or when creating a key. Read-only credentials do not see write tools in `tools/list`.
+
+### OAuth 2.1 authorization server
+
+| Endpoint                                                 | Purpose                                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `GET /.well-known/oauth-authorization-server`            | RFC 8414 metadata (issuer = `PUBLIC_API_URL`)                             |
+| `GET /.well-known/oauth-protected-resource/v1/mcp/:slug` | RFC 9728 metadata for one project                                         |
+| `POST /v1/oauth/register`                                | RFC 7591 dynamic client registration (public or confidential clients)     |
+| `GET /v1/oauth/authorize`                                | Validates the request, redirects to `${WEB_URL}/authorize` (consent page) |
+| `GET/POST /v1/oauth/consent`                             | Consent page support (cookie session + CSRF)                              |
+| `POST /v1/oauth/token`                                   | `authorization_code` (PKCE S256 required) and `refresh_token` grants      |
+| `POST /v1/oauth/revoke`                                  | RFC 7009                                                                  |
+| `GET /v1/projects/:slug/connections`                     | Connected apps for a project (cookie auth)                                |
+| `DELETE /v1/projects/:slug/connections/:id`              | Disconnect an app (revokes all of its tokens)                             |
+
+Design notes:
+
+- Access tokens (1h), refresh tokens (90d, rotating) and authorization codes (10min, single use) are opaque and stored as SHA-256 hashes. Reuse of a consumed code or refresh token revokes the whole connection.
+- Redirect URIs are matched exactly, except loopback (`http://localhost`, `http://127.0.0.1`) where the port is ignored per RFC 8252 so Claude Code's ephemeral-port callback works.
+- The `iss` parameter is included in authorization responses (RFC 9207).
+- Token and revocation endpoints accept `client_secret_basic`, `client_secret_post`, and `none` (public clients with PKCE).
+
+### Client setup
+
+Claude (web, desktop, mobile): Settings → Connectors → Add custom connector → paste the project URL → approve in Loreum.
+
+Claude Code:
+
+```sh
+claude mcp add --transport http loreum https://api.loreum.app/v1/mcp/<project-slug>
+# or with an API key instead of signing in:
+claude mcp add --transport http loreum https://api.loreum.app/v1/mcp/<project-slug> \
+  --header "Authorization: Bearer lrm_your_api_key"
+```
+
+Cursor and other JSON-configured clients (OAuth is discovered from the URL):
 
 ```json
 {
   "mcpServers": {
-    "loreum": {
-      "command": "node",
-      "args": ["path/to/apps/mcp/dist/index.js"],
-      "env": {
-        "MCP_API_BASE_URL": "http://localhost:3021/v1",
-        "MCP_API_TOKEN": "your-bearer-token"
-      }
-    }
+    "loreum": { "url": "https://api.loreum.app/v1/mcp/<project-slug>" }
   }
 }
 ```
 
-### Environment Variables
+### Tools
 
-| Variable           | Required | Default                    | Notes                           |
-| ------------------ | -------- | -------------------------- | ------------------------------- |
-| `MCP_API_BASE_URL` | no       | `http://localhost:3021/v1` | Loreum API base URL             |
-| `MCP_API_TOKEN`    | no       | -                          | Bearer token for authentication |
+All tools are scoped to the credential's project; there is no `projectSlug` parameter. Every tool has a `title`, `readOnlyHint`, and `destructiveHint`. Results are JSON text with internal fields (`projectId`, timestamps) stripped; domain errors come back as tool errors with a plain message.
 
-### Resources
+Read (all credentials):
 
-#### `project_overview`
+| Tool                 | Input                            | Returns                                                   |
+| -------------------- | -------------------------------- | --------------------------------------------------------- |
+| `get_project`        | —                                | Name, description, timeline settings, content counts      |
+| `search_project`     | `query`, `types?`, `limit?`      | Entities, lore, timeline events, scenes with excerpts     |
+| `list_entities`      | `type?`, `q?`                    | Entities with type fields and tags                        |
+| `get_entity`         | `entitySlug`                     | Entity hub: relationships, events, lore, tags, membership |
+| `get_entity_types`   | —                                | Custom item types and field schemas                       |
+| `list_tags`          | —                                | Tags                                                      |
+| `list_relationships` | `entitySlug?`                    | Graph edges                                               |
+| `list_lore_articles` | `q?`, `category?`, `entitySlug?` | Article summaries                                         |
+| `get_lore_article`   | `articleSlug`                    | Full article                                              |
+| `get_timeline`       | `entitySlug?`, `significance?`   | Events in order                                           |
+| `get_timeline_event` | `eventId`                        | One event                                                 |
+| `list_eras`          | —                                | Eras                                                      |
+| `get_storyboard`     | —                                | Plotlines + works with chapters                           |
+| `get_plotline`       | `plotlineSlug`                   | Plotline with plot points                                 |
+| `get_work`           | `workSlug`                       | Work with chapters                                        |
+| `list_scenes`        | `chapterId`                      | Scenes with prose, POV, location, plotline                |
 
-- **URI:** `loreum://project/{projectSlug}/overview`
-- **Returns:** Project metadata (JSON)
-- **API call:** `GET /projects/{projectSlug}`
+Write (`READ_WRITE` only): `create_entity`, `update_entity`, `delete_entity`, `create_relationship`, `update_relationship`, `delete_relationship`, `create_lore_article`, `update_lore_article`, `delete_lore_article`, `create_timeline_event`, `update_timeline_event`, `delete_timeline_event`, `create_era`, `create_plotline`, `create_plot_point`, `update_plot_point`, `create_work`, `create_chapter`, `create_scene`, `update_scene`. Inputs mirror the REST DTOs (entities and lore articles accept `tags`, which are created on demand; scenes accept `content` prose). Delete tools are annotated destructive.
 
-### Query Tools
+Resource: `loreum://project/overview` (same payload as `get_project`).
 
-#### `search_project` - Built
+### Rate limiting
 
-Search across all content in a project.
-
-| Parameter     | Type     | Required | Notes                                         |
-| ------------- | -------- | -------- | --------------------------------------------- |
-| `projectSlug` | string   | yes      |                                               |
-| `query`       | string   | yes      | Search text                                   |
-| `types`       | string[] | no       | Filter: `entity`, `lore`, `scene`, `timeline` |
-| `limit`       | number   | no       | Max results                                   |
-
-**API call:** `GET /projects/{projectSlug}/search?q={query}&types={types}&limit={limit}`
-
-#### `get_entity` - Built
-
-Retrieve a specific entity with relationships and linked content.
-
-| Parameter     | Type     | Required | Notes                                         |
-| ------------- | -------- | -------- | --------------------------------------------- |
-| `projectSlug` | string   | yes      |                                               |
-| `entitySlug`  | string   | yes      |                                               |
-| `include`     | string[] | no       | `relationships`, `lore`, `timeline`, `scenes` |
-
-**API call:** `GET /projects/{projectSlug}/entities/{entitySlug}?include={include}`
-
-#### `get_entity_hub` - Built
-
-Get the full aggregated lore page for an entity - everything connected to it.
-
-| Parameter     | Type   | Required | Notes |
-| ------------- | ------ | -------- | ----- |
-| `projectSlug` | string | yes      |       |
-| `entitySlug`  | string | yes      |       |
-
-**API call:** `GET /projects/{projectSlug}/entities/{entitySlug}/hub`
-
-#### `list_entities` - Built
-
-List and filter entities in a project.
-
-| Parameter     | Type   | Required | Notes              |
-| ------------- | ------ | -------- | ------------------ |
-| `projectSlug` | string | yes      |                    |
-| `type`        | string | no       | Entity type filter |
-| `tag`         | string | no       | Tag name filter    |
-| `q`           | string | no       | Search query       |
-
-**API call:** `GET /projects/{projectSlug}/entities?type={type}&tag={tag}&q={q}`
-
-#### `get_storyboard` - Built
-
-Get narrative structure: plotlines, works, chapters, scenes.
-
-| Parameter     | Type   | Required | Notes                   |
-| ------------- | ------ | -------- | ----------------------- |
-| `projectSlug` | string | yes      |                         |
-| `bookSlug`    | string | no       | Filter to specific work |
-| `detail`      | enum   | no       | `outline` or `full`     |
-
-**API call:** `GET /projects/{projectSlug}/storyboard?book={bookSlug}&detail={detail}`
-
-#### `get_entity_types` - Built
-
-List all entity types and their field schemas for a project.
-
-| Parameter     | Type   | Required | Notes |
-| ------------- | ------ | -------- | ----- |
-| `projectSlug` | string | yes      |       |
-
-**API call:** `GET /projects/{projectSlug}/entity-types`
-
-#### `get_style_guide` - Planned
-
-Get the project's style guide. When writing a scene, also returns scene-level `styleNotes` and `voiceNotes` for characters present.
-
-| Parameter     | Type   | Required | Notes                                                                          |
-| ------------- | ------ | -------- | ------------------------------------------------------------------------------ |
-| `projectSlug` | string | yes      |                                                                                |
-| `sceneId`     | string | no       | If provided, includes scene styleNotes and character voiceNotes for that scene |
-
-**API call:** `GET /projects/{projectSlug}/style-guide` (+ scene context resolution)
-
-### Mutation Tools
-
-#### `create_entity` - Built
-
-| Parameter     | Type     | Required | Notes                                           |
-| ------------- | -------- | -------- | ----------------------------------------------- |
-| `projectSlug` | string   | yes      |                                                 |
-| `type`        | enum     | yes      | `CHARACTER`, `LOCATION`, `ORGANIZATION`, `ITEM` |
-| `name`        | string   | yes      |                                                 |
-| `summary`     | string   | no       |                                                 |
-| `description` | string   | no       |                                                 |
-| `backstory`   | string   | no       |                                                 |
-| `secrets`     | string   | no       |                                                 |
-| `notes`       | string   | no       |                                                 |
-| `tags`        | string[] | no       |                                                 |
-
-**API call:** `POST /projects/{projectSlug}/entities`
-
-#### `update_entity` - Built
-
-| Parameter     | Type   | Required | Notes            |
-| ------------- | ------ | -------- | ---------------- |
-| `projectSlug` | string | yes      |                  |
-| `entitySlug`  | string | yes      |                  |
-| `updates`     | object | yes      | Fields to update |
-
-**API call:** `PATCH /projects/{projectSlug}/entities/{entitySlug}`
-
-#### `create_relationship` - Built
-
-| Parameter          | Type    | Required | Notes             |
-| ------------------ | ------- | -------- | ----------------- |
-| `projectSlug`      | string  | yes      |                   |
-| `sourceEntitySlug` | string  | yes      |                   |
-| `targetEntitySlug` | string  | yes      |                   |
-| `type`             | string  | yes      | Relationship type |
-| `label`            | string  | no       |                   |
-| `metadata`         | object  | no       |                   |
-| `bidirectional`    | boolean | no       |                   |
-
-**API call:** `POST /projects/{projectSlug}/relationships`
-
-#### `create_lore_article` - Built
-
-| Parameter     | Type     | Required | Notes            |
-| ------------- | -------- | -------- | ---------------- |
-| `projectSlug` | string   | yes      |                  |
-| `title`       | string   | yes      |                  |
-| `content`     | string   | yes      | Markdown         |
-| `category`    | string   | no       |                  |
-| `tags`        | string[] | no       |                  |
-| `entitySlugs` | string[] | no       | Link to entities |
-
-**API call:** `POST /projects/{projectSlug}/lore`
+Requests are rate limited per credential (hash of the bearer token) rather than per IP, so many users behind one hosted assistant's egress range do not throttle each other.
 
 ---
 
@@ -901,18 +832,24 @@ Get the project's style guide. When writing a scene, also returns scene-level `s
 
 ### Optional Environment Variables
 
-| Variable                 | Default                  | Description             |
-| ------------------------ | ------------------------ | ----------------------- |
-| `JWT_ACCESS_TTL`         | `2h`                     | JWT expiration          |
-| `TOKEN_ROTATION_MINUTES` | `100`                    | Token rotation interval |
-| `SESSION_TTL_DAYS`       | `60`                     | Session TTL             |
-| `REDIS_URL`              | `redis://localhost:6379` | Redis connection        |
-| `COOKIE_DOMAIN`          | -                        | Cookie domain scope     |
-| `R2_ACCOUNT_ID`          | -                        | Cloudflare R2 account   |
-| `R2_ACCESS_KEY_ID`       | -                        | R2 access key           |
-| `R2_SECRET_ACCESS_KEY`   | -                        | R2 secret key           |
-| `R2_BUCKET_NAME`         | -                        | R2 bucket name          |
-| `R2_PUBLIC_URL`          | -                        | R2 public URL           |
+| Variable                          | Default                  | Description                                                                                   |
+| --------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------- |
+| `JWT_ACCESS_TTL`                  | `2h`                     | JWT expiration                                                                                |
+| `TOKEN_ROTATION_MINUTES`          | `100`                    | Token rotation interval                                                                       |
+| `SESSION_TTL_DAYS`                | `60`                     | Session TTL                                                                                   |
+| `REDIS_URL`                       | `redis://localhost:6379` | Redis connection                                                                              |
+| `COOKIE_DOMAIN`                   | -                        | Cookie domain scope                                                                           |
+| `PUBLIC_API_URL`                  | `http://localhost:3021`  | Public API origin; OAuth issuer and base of every MCP URL. Must be exactly what clients paste |
+| `WEB_URL`                         | `CORS_ORIGIN`            | Web app origin (consent page, post-login redirect)                                            |
+| `OAUTH_ACCESS_TOKEN_TTL_SECONDS`  | `3600`                   | MCP OAuth access token lifetime                                                               |
+| `OAUTH_REFRESH_TOKEN_TTL_SECONDS` | `7776000`                | MCP OAuth refresh token lifetime (90 days)                                                    |
+| `OAUTH_ALLOWED_REDIRECT_URIS`     | -                        | Extra redirect URIs accepted for any client (comma separated)                                 |
+| `BILLING_ENABLED`                 | `false`                  | Enforce plan features/limits. Off = every account has everything                              |
+| `R2_ACCOUNT_ID`                   | -                        | Cloudflare R2 account                                                                         |
+| `R2_ACCESS_KEY_ID`                | -                        | R2 access key                                                                                 |
+| `R2_SECRET_ACCESS_KEY`            | -                        | R2 secret key                                                                                 |
+| `R2_BUCKET_NAME`                  | -                        | R2 bucket name                                                                                |
+| `R2_PUBLIC_URL`                   | -                        | R2 public URL                                                                                 |
 
 ---
 
@@ -920,13 +857,10 @@ Get the project's style guide. When writing a scene, also returns scene-level `s
 
 Features referenced in the MCP tools or product spec that don't have REST endpoints yet:
 
-| Gap                                            | Notes                                                                                                                                    |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /projects/:slug/search`                   | MCP `search_project` calls this, but no dedicated search controller exists yet. Entity/lore listing with `?q=` provides partial coverage |
-| `GET /projects/:slug/entities/:slug/hub`       | MCP `get_entity_hub` calls this. The standard entity GET includes connected data, but hub may need a dedicated aggregation endpoint      |
-| `GET /projects/:slug/storyboard?book=&detail=` | MCP `get_storyboard` expects query params. Current storyboard endpoints are per-resource (plotlines, works, scenes separately)           |
-| Style guide endpoints                          | `GET/PUT /projects/:slug/style-guide` - planned                                                                                          |
-| `Scene.styleNotes`                             | Field not yet in schema                                                                                                                  |
-| `Character.voiceNotes`                         | Field not yet in schema                                                                                                                  |
-| Pagination                                     | No endpoints support pagination. Will be needed for projects with many entities                                                          |
-| `content` field on Scene                       | Exists in schema but no dedicated scene content/prose endpoint                                                                           |
+| Gap                    | Notes                                                                                                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full-text search       | `GET /projects/:slug/search` and MCP `search_project` use Prisma `contains` across entities, lore, timeline events, and scenes. OpenSearch is the long-term backend |
+| Style guide endpoints  | `GET/PUT /projects/:slug/style-guide` - planned                                                                                                                     |
+| `Scene.styleNotes`     | Field not yet in schema                                                                                                                                             |
+| `Character.voiceNotes` | Field not yet in schema                                                                                                                                             |
+| Pagination             | No endpoints support pagination. Will be needed for projects with many entities                                                                                     |
