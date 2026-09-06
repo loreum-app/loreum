@@ -37,7 +37,8 @@ export class AppConfig {
     const raw =
       this.configService.get("PUBLIC_API_URL") ??
       `http://localhost:${this.api.port}`;
-    return raw.replace(/\/+$/, "");
+    // Tolerate the web app's spelling (…/v1): the API adds the prefix itself.
+    return raw.replace(/\/+$/, "").replace(/\/v1$/, "");
   }
 
   /** Public origin of the web app (consent screen, sign-in). */
