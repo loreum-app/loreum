@@ -1,3 +1,20 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# pnpm 10+ blocks dependency build scripts unless allowed here.
+allowBuilds:
+  "@prisma/engines": true
+  prisma: true
+  "@swc/core": true
+  esbuild: true
+  msgpackr-extract: true
+  "@scarf/scarf": false
+  workerd: false
+
+# @nestjs/throttler 6.5 has not yet declared NestJS 12 in its peer range but
+# works with it (covered by the API integration tests).
+peerDependencyRules:
+  allowedVersions:
+    "@nestjs/throttler>@nestjs/common": "12"
+    "@nestjs/throttler>@nestjs/core": "12"

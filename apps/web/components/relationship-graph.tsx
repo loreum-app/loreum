@@ -20,6 +20,7 @@ import {
   type OnNodesChange,
   type OnEdgesChange,
   type EdgeMouseHandler,
+  type OnNodeDrag,
   type EdgeProps,
   type ConnectionLineComponentProps,
   Handle,
@@ -444,8 +445,8 @@ export function RelationshipGraph({
   );
 
   // Save position of dragged node
-  const handleNodeDragStop = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
+  const handleNodeDragStop: OnNodeDrag = useCallback(
+    (_event, node) => {
       const patch = { [node.id]: { x: node.position.x, y: node.position.y } };
       api(`/projects/${projectSlug}/graph-layout`, {
         method: "PATCH",

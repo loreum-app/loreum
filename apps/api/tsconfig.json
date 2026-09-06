@@ -1,11 +1,10 @@
 {
   "extends": "@loreum/typescript-config/nestjs.json",
   "compilerOptions": {
-    "module": "Node16",
-    "moduleResolution": "Node16",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "isolatedModules": false,
     "outDir": "./dist",
-    "baseUrl": "./",
     "paths": {
       "generated/prisma": ["./generated/prisma"]
     }

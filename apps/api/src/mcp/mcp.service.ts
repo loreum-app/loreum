@@ -30,7 +30,7 @@ import { registerTimelineTools } from "./tools/timeline.tools";
 import { registerStoryboardTools } from "./tools/storyboard.tools";
 
 export const MCP_SERVER_NAME = "loreum";
-export const MCP_SERVER_VERSION = "1.0.0";
+export const MCP_SERVER_VERSION = "0.2.0";
 
 /**
  * Builds the per-request MCP server for the project the caller's credential is

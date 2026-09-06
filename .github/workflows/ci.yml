@@ -34,7 +34,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter api db:generate
-      - run: pnpm --filter api vitest run src/common
+      - run: pnpm --filter api test:unit
 
   integration-tests:
     name: Integration Tests

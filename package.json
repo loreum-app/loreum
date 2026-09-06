@@ -11,11 +11,13 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@loreum/eslint-config": "workspace:*",
+    "eslint": "^10.10.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
-    "prettier": "^3.7.4",
-    "turbo": "^2.9.6",
-    "typescript": "5.9.2"
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
+    "turbo": "^2.10.12",
+    "typescript": "6.0.3"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -26,8 +28,8 @@
       "prettier --write --ignore-path .gitignore"
     ]
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@12.3.4",
   "engines": {
-    "node": ">=18"
+    "node": ">=22.12"
   }
 }

@@ -72,7 +72,7 @@ AI plugs into all of it. Connect Claude, Cursor, or any MCP-compatible assistant
 git clone https://github.com/loreum-app/loreum.git
 cd loreum
 
-# Install dependencies
+# Install dependencies (pnpm 12, Node 22.12+)
 pnpm install
 
 # Copy environment files
