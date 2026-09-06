@@ -286,8 +286,11 @@ export default function McpDocsPage() {
             <code>WEB_URL</code> to the web app origin. Hosted clients such as
             claude.ai require HTTPS and must be able to reach{" "}
             <code>/.well-known/oauth-authorization-server</code> on the API
-            origin. Locally the endpoint is{" "}
-            <code>{API_ORIGIN}/v1/mcp/&lt;world&gt;</code>.
+            origin. If the API is behind Cloudflare, allow AI crawlers (or add a
+            WAF skip rule) for the MCP and OAuth paths: Cloudflare&apos;s
+            &quot;Block AI bots&quot; setting otherwise drops the hosted
+            client&apos;s authenticated requests at the edge. Locally the
+            endpoint is <code>{API_ORIGIN}/v1/mcp/&lt;world&gt;</code>.
           </p>
         </section>
       </div>
