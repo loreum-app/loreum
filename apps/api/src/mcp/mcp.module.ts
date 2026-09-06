@@ -32,6 +32,7 @@ import { McpAccessLogMiddleware } from "./mcp-access-log.middleware";
 })
 export class McpModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(McpAccessLogMiddleware).forRoutes("mcp", "mcp/*path");
+    // Nest matches route strings by prefix, so "mcp" covers /mcp and /mcp/:slug.
+    consumer.apply(McpAccessLogMiddleware).forRoutes("mcp");
   }
 }
