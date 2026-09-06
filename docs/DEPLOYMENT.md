@@ -84,6 +84,18 @@ Production deployment is handled by a separate private repository that:
 
 This separation keeps deployment secrets and infrastructure config out of the open source codebase.
 
+## Cloudflare and hosted AI clients
+
+claude.ai, Claude Desktop, and ChatGPT reach the API from their own servers, and Cloudflare classifies that traffic as AI bots. With **Block AI training bots / AI Crawl Control** (or Bot Fight Mode) enabled on the zone, Cloudflare answers their authenticated MCP request with 403 at the edge: the OAuth flow completes, the API log shows the token being issued, and then nothing arrives. The connector reports "the integration rejected the credentials it just issued".
+
+Fix in the Cloudflare dashboard: allow AI crawlers for `api.loreum.app`, or add a WAF custom rule with action **Skip** (managed rules and bot protection) for
+
+```
+(http.host eq "api.loreum.app" and (starts_with(http.request.uri.path, "/v1/mcp") or starts_with(http.request.uri.path, "/v1/oauth") or starts_with(http.request.uri.path, "/.well-known/")))
+```
+
+Security → Events shows the blocked POSTs from Anthropic's range `160.79.104.0/21` if this is the cause. Claude Code and curl are unaffected because they connect from your own machine, which is why the server looks healthy from everywhere except the hosted client.
+
 ## Smoke testing the MCP endpoint
 
 After a deploy, confirm discovery and the auth challenge from outside:
