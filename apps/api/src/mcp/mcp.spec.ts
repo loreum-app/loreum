@@ -127,6 +127,15 @@ describe("MCP endpoint (integration)", () => {
       );
     });
 
+    it("accepts a lowercase 'bearer' scheme (RFC 9110: schemes are case-insensitive)", async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/v1/mcp/${projectSlug}`)
+        .set("Authorization", `bearer ${readWriteKey}`)
+        .set("Accept", "application/json, text/event-stream")
+        .send({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+      expect(res.status).toBe(200);
+    });
+
     it("rejects an unknown bearer token", async () => {
       const bad = new TestMcpClient(
         app,

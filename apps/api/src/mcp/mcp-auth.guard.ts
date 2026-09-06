@@ -12,6 +12,7 @@ import { ApiKeysService } from "../api-keys/api-keys.service";
 import { ConnectionsService } from "../oauth/connections.service";
 import { McpAuthContext, scopesForPermission } from "../oauth/oauth.types";
 import { isApiKey } from "../oauth/tokens";
+import { extractBearerToken } from "../common/utils/bearer";
 
 /** Where the guard leaves the resolved context for the MCP handler factory. */
 export const MCP_AUTH_EXTRA_KEY = "loreum";
@@ -53,13 +54,10 @@ export class McpAuthGuard implements CanActivate {
     const res = context.switchToHttp().getResponse<Response>();
     const slug = (req.params as Record<string, string | undefined>).projectSlug;
 
-    const header = req.headers.authorization;
-    if (!header?.startsWith("Bearer ")) {
+    const token = extractBearerToken(req.headers.authorization);
+    if (!token) {
       return this.deny(res, slug, "invalid_request", "Missing bearer token");
     }
-    const token = header.slice(7).trim();
-    if (!token)
-      return this.deny(res, slug, "invalid_request", "Missing bearer token");
 
     const ctx = isApiKey(token)
       ? await this.resolveApiKey(token)
@@ -137,6 +135,9 @@ export class McpAuthGuard implements CanActivate {
     error: "invalid_request" | "invalid_token",
     description: string,
   ): never {
+    this.logger.warn(
+      `deny ${slug ? `/v1/mcp/${slug}` : "/v1/mcp"}: ${error} — ${description}`,
+    );
     const parts = [
       'Bearer realm="loreum"',
       `error="${error}"`,

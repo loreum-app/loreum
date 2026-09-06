@@ -9,6 +9,7 @@ import { AuthGuard } from "@nestjs/passport";
 import { Request } from "express";
 import { ApiKeysService } from "../../api-keys/api-keys.service";
 import { AuthUser } from "../types/jwt.types";
+import { extractBearerToken } from "../../common/utils/bearer";
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -32,12 +33,11 @@ export class ApiKeyAuthGuard extends AuthGuard("jwt") implements CanActivate {
       return super.canActivate(context) as Promise<boolean>;
     }
 
-    const authHeader = request.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
+    const token = extractBearerToken(request.headers.authorization);
+    if (!token) {
       throw new UnauthorizedException("No valid authentication provided");
     }
 
-    const token = authHeader.slice(7);
     const apiKey = await this.apiKeysService.validate(token);
 
     const params = request.params as Record<string, string | undefined>;
