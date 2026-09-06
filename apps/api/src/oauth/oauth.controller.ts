@@ -4,6 +4,7 @@ import {
   Get,
   Header,
   HttpCode,
+  Logger,
   Post,
   Query,
   Req,
@@ -64,14 +65,32 @@ function extractClientCredentials(
   return { clientId: body.client_id, clientSecret: body.client_secret };
 }
 
-function sendOAuthError(res: Response, err: unknown) {
+const logger = new Logger("OAuth");
+
+/**
+ * Every OAuth rejection is logged (endpoint, client, code, reason) because the
+ * client typically shows the user nothing more than "authorization failed".
+ */
+function sendOAuthError(
+  res: Response,
+  err: unknown,
+  where: string,
+  clientId?: string,
+) {
   if (err instanceof OAuthError) {
+    logger.warn(
+      `${where} client=${clientId ?? "?"} -> ${err.status} ${err.code}: ${err.message}`,
+    );
     if (err.status === 401) {
       res.setHeader("WWW-Authenticate", 'Basic realm="loreum-oauth"');
     }
     res.status(err.status).json(err.toResponseBody());
     return;
   }
+  logger.error(
+    `${where} client=${clientId ?? "?"} unexpected error`,
+    err instanceof Error ? err.stack : String(err),
+  );
   throw err;
 }
 
@@ -101,11 +120,17 @@ export class OAuthController {
       await this.oauth.validateAuthorizeRequest(input);
     } catch (err) {
       if (err instanceof OAuthError && err.redirectUri) {
+        logger.warn(
+          `authorize client=${input.client_id ?? "?"} -> redirect error ${err.code}: ${err.message}`,
+        );
         res.redirect(302, err.toRedirectUrl());
         return;
       }
-      return sendOAuthError(res, err);
+      return sendOAuthError(res, err, "authorize", input.client_id);
     }
+    logger.log(
+      `authorize client=${input.client_id} resource=${input.resource ?? "-"} scope=${input.scope ?? "-"} -> consent`,
+    );
     res.redirect(302, this.oauth.consentPageUrl(input));
   }
 
@@ -114,18 +139,22 @@ export class OAuthController {
   @Header("Cache-Control", "no-store")
   @Header("Pragma", "no-cache")
   async token(@Req() req: Request, @Body() body: Params, @Res() res: Response) {
+    let clientId: string | undefined;
     try {
-      const { clientId, clientSecret } = extractClientCredentials(
-        req,
-        body ?? {},
+      const creds = extractClientCredentials(req, body ?? {});
+      clientId = creds.clientId;
+      const client = await this.clients.authenticate(
+        clientId,
+        creds.clientSecret,
       );
-      const client = await this.clients.authenticate(clientId, clientSecret);
       switch (body?.grant_type) {
         case "authorization_code":
           res.json(await this.oauth.exchangeAuthorizationCode(client, body));
+          logger.log(`token client=${clientId} grant=authorization_code ok`);
           return;
         case "refresh_token":
           res.json(await this.oauth.refresh(client, body));
+          logger.log(`token client=${clientId} grant=refresh_token ok`);
           return;
         case undefined:
           throw new OAuthError("invalid_request", "grant_type is required");
@@ -136,7 +165,12 @@ export class OAuthController {
           );
       }
     } catch (err) {
-      return sendOAuthError(res, err);
+      return sendOAuthError(
+        res,
+        err,
+        `token grant=${body?.grant_type}`,
+        clientId,
+      );
     }
   }
 
@@ -145,9 +179,13 @@ export class OAuthController {
   @Header("Cache-Control", "no-store")
   async register(@Body() body: unknown, @Res() res: Response) {
     try {
-      res.status(201).json(await this.clients.register(body));
+      const info = await this.clients.register(body);
+      logger.log(
+        `register client=${info.client_id} name=${info.client_name ?? "-"} auth=${info.token_endpoint_auth_method} redirects=${info.redirect_uris.join(",")}`,
+      );
+      res.status(201).json(info);
     } catch (err) {
-      return sendOAuthError(res, err);
+      return sendOAuthError(res, err, "register");
     }
   }
 
@@ -168,7 +206,7 @@ export class OAuthController {
       await this.oauth.revoke(client, body?.token);
       res.status(200).json({});
     } catch (err) {
-      return sendOAuthError(res, err);
+      return sendOAuthError(res, err, "revoke", body?.client_id);
     }
   }
 
@@ -189,7 +227,12 @@ export class OAuthController {
         await this.oauth.consentContext(user.id, pickAuthorizeInput(query)),
       );
     } catch (err) {
-      return sendOAuthError(res, err);
+      return sendOAuthError(
+        res,
+        err,
+        `consent-context user=${user.id}`,
+        query.client_id,
+      );
     }
   }
 
@@ -211,8 +254,16 @@ export class OAuthController {
           permissions: dto.permissions,
         }),
       );
+      logger.log(
+        `consent user=${user.id} client=${dto.client_id} decision=${dto.decision} project=${dto.projectSlug ?? "-"} permissions=${dto.permissions ?? "-"}`,
+      );
     } catch (err) {
-      return sendOAuthError(res, err);
+      return sendOAuthError(
+        res,
+        err,
+        `consent user=${user.id} decision=${dto.decision}`,
+        dto.client_id,
+      );
     }
   }
 }
