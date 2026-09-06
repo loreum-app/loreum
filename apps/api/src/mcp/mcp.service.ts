@@ -103,6 +103,7 @@ export class McpService implements OnModuleInit, OnModuleDestroy {
           } access.`,
           "Start with get_project for an overview, then search_project or the list_* tools to find things by slug/id before reading or editing them.",
           "Entities (characters, locations, organizations, items) are addressed by slug; timeline events, scenes, chapters, plot points, and relationships by id.",
+          "Timeline date fields differ by calendar mode; get_project → timeline.dateGuide says exactly which fields to fill and in what format.",
           ctx.permissions === "READ_WRITE"
             ? "Before creating something, search for it to avoid duplicates. Delete tools are irreversible: confirm with the user first."
             : "This connection cannot modify the world; ask the user for a read-write connection if changes are needed.",

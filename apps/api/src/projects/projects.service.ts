@@ -9,6 +9,43 @@ import { CreateProjectDto } from "./dto/create-project.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
 import { slugify } from "../common/utils/slug";
 
+/**
+ * Tells API/MCP callers how to fill timeline date fields for this world. The
+ * gantt reads different fields per mode (ISO `date` strings in standard mode,
+ * numeric `dateValue` in custom mode), and nothing else in the payload says so.
+ */
+export function timelineDateGuide(project: {
+  timelineMode: string;
+  timelineStart: number | null;
+  timelineEnd: number | null;
+  timelineLabelPrefix: string | null;
+  timelineLabelSuffix: string | null;
+}): string {
+  if (project.timelineMode === "custom") {
+    const prefix = project.timelineLabelPrefix ?? "";
+    const suffix = project.timelineLabelSuffix ?? "";
+    const range =
+      project.timelineStart != null && project.timelineEnd != null
+        ? ` between ${project.timelineStart} and ${project.timelineEnd}`
+        : "";
+    const example = `${prefix}${project.timelineStart ?? 1000}${suffix}`;
+    return (
+      `Custom numeric calendar. Timeline events: set dateValue (and endDateValue for spans) to a number${range}; ` +
+      `the gantt ignores the date string, so set date to the display label, e.g. "${example}". ` +
+      "Eras: startDate and endDate are numbers on the same scale."
+    );
+  }
+  const range =
+    project.timelineStart != null && project.timelineEnd != null
+      ? ` Configured year range: ${project.timelineStart}–${project.timelineEnd}.`
+      : "";
+  return (
+    "Standard (real-world) calendar. Timeline events: set date (and endDate for spans) to an ISO date, YYYY-MM-DD; " +
+    "leave dateValue and endDateValue unset. Eras: startDate and endDate are calendar years, e.g. 2071." +
+    range
+  );
+}
+
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -78,6 +115,7 @@ export class ProjectsService {
         end: project.timelineEnd,
         labelPrefix: project.timelineLabelPrefix,
         labelSuffix: project.timelineLabelSuffix,
+        dateGuide: timelineDateGuide(project),
       },
       counts: {
         entities,
