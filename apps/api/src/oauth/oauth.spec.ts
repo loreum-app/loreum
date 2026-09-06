@@ -287,7 +287,7 @@ describe("MCP OAuth authorization server (integration)", () => {
         code_challenge: "abc",
         code_challenge_method: "S256",
       });
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(400);
       expect(res.body.error).toBe("invalid_client");
     });
 
@@ -750,7 +750,7 @@ describe("MCP OAuth authorization server (integration)", () => {
       const res = await http_()
         .get("/v1/oauth/authorize")
         .query(authorizeParams(bad, challenge));
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(400);
       expect(res.body.error).toBe("invalid_client");
       expect(res.body.error_description).toContain("does not match");
     });
@@ -765,7 +765,7 @@ describe("MCP OAuth authorization server (integration)", () => {
             challenge,
           ),
         );
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(400);
       expect(res.body.error).toBe("invalid_client");
     });
   });

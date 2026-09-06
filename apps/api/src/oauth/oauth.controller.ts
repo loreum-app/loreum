@@ -76,15 +76,21 @@ function sendOAuthError(
   err: unknown,
   where: string,
   clientId?: string,
+  opts: { clientAuthChallenge?: boolean } = {},
 ) {
   if (err instanceof OAuthError) {
     logger.warn(
       `${where} client=${clientId ?? "?"} -> ${err.status} ${err.code}: ${err.message}`,
     );
-    if (err.status === 401) {
+    // Only the token/revocation endpoints authenticate clients with HTTP
+    // Basic. Sending this challenge from a browser-facing endpoint makes the
+    // browser show a username/password prompt.
+    const status =
+      err.status === 401 && !opts.clientAuthChallenge ? 400 : err.status;
+    if (status === 401) {
       res.setHeader("WWW-Authenticate", 'Basic realm="loreum-oauth"');
     }
-    res.status(err.status).json(err.toResponseBody());
+    res.status(status).json(err.toResponseBody());
     return;
   }
   logger.error(
@@ -170,6 +176,7 @@ export class OAuthController {
         err,
         `token grant=${body?.grant_type}`,
         clientId,
+        { clientAuthChallenge: true },
       );
     }
   }
@@ -206,7 +213,9 @@ export class OAuthController {
       await this.oauth.revoke(client, body?.token);
       res.status(200).json({});
     } catch (err) {
-      return sendOAuthError(res, err, "revoke", body?.client_id);
+      return sendOAuthError(res, err, "revoke", body?.client_id, {
+        clientAuthChallenge: true,
+      });
     }
   }
 

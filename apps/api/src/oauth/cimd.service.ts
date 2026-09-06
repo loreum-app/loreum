@@ -176,50 +176,26 @@ export class CimdService {
     if (!insecure && addresses.some((a) => isPrivateAddress(a.address))) {
       return fail(`${url.hostname} resolves to a non-public address`);
     }
-    const pinned = addresses[0]!;
-
-    const raw = await new Promise<string>((resolve, reject) => {
-      const lib = url.protocol === "https:" ? https : http;
-      const req = lib.request(
-        url,
-        {
-          method: "GET",
-          headers: {
-            accept: "application/json",
-            "user-agent": "loreum-oauth/1.0",
-          },
-          timeout: TIMEOUT_MS,
-          lookup: (_host, _opts, cb) =>
-            (cb as (err: null, address: string, family: number) => void)(
-              null,
-              pinned.address,
-              pinned.family,
-            ),
-        },
-        (res) => {
-          if (res.statusCode !== 200) {
-            res.resume();
-            reject(new Error(`HTTP ${res.statusCode}`));
-            return;
-          }
-          let size = 0;
-          const chunks: Buffer[] = [];
-          res.on("data", (chunk: Buffer) => {
-            size += chunk.length;
-            if (size > MAX_BYTES) {
-              req.destroy(new Error(`document exceeds ${MAX_BYTES} bytes`));
-              return;
-            }
-            chunks.push(chunk);
-          });
-          res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-          res.on("error", reject);
-        },
-      );
-      req.on("timeout", () => req.destroy(new Error("timed out")));
-      req.on("error", reject);
-      req.end();
-    }).catch((err: Error) => fail(`fetch failed (${err.message})`));
+    // Prefer IPv4 (many hosts have no IPv6 route) and try each validated
+    // address in turn; the socket is pinned so DNS cannot be re-resolved.
+    const candidates = [
+      ...addresses.filter((a) => a.family === 4),
+      ...addresses.filter((a) => a.family !== 4),
+    ];
+    let raw: string | undefined;
+    let lastError = "no addresses";
+    for (const pinned of candidates) {
+      try {
+        raw = await this.fetchFrom(url, pinned);
+        break;
+      } catch (err) {
+        lastError = `${pinned.address}: ${err instanceof Error ? err.message : String(err)}`;
+        this.logger.warn(
+          `metadata document fetch via ${pinned.address} failed: ${lastError}`,
+        );
+      }
+    }
+    if (raw === undefined) return fail(`fetch failed (${lastError})`);
 
     let json: unknown;
     try {
@@ -246,5 +222,60 @@ export class CimdService {
       }
     }
     return parsed.data;
+  }
+
+  private fetchFrom(url: URL, pinned: dns.LookupAddress): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const lib = url.protocol === "https:" ? https : http;
+      const req = lib.request(
+        url,
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            "user-agent": "loreum-oauth/1.0",
+          },
+          timeout: TIMEOUT_MS,
+          // Node asks for `all: true` when autoSelectFamily is on and then
+          // expects an array; honour both callback shapes.
+          lookup: (_host, opts, cb) => {
+            const callback = cb as unknown as (
+              err: null,
+              address: string | dns.LookupAddress[],
+              family?: number,
+            ) => void;
+            if ((opts as { all?: boolean }).all) {
+              callback(null, [
+                { address: pinned.address, family: pinned.family },
+              ]);
+            } else {
+              callback(null, pinned.address, pinned.family);
+            }
+          },
+        },
+        (res) => {
+          if (res.statusCode !== 200) {
+            res.resume();
+            reject(new Error(`HTTP ${res.statusCode}`));
+            return;
+          }
+          let size = 0;
+          const chunks: Buffer[] = [];
+          res.on("data", (chunk: Buffer) => {
+            size += chunk.length;
+            if (size > MAX_BYTES) {
+              req.destroy(new Error(`document exceeds ${MAX_BYTES} bytes`));
+              return;
+            }
+            chunks.push(chunk);
+          });
+          res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+          res.on("error", reject);
+        },
+      );
+      req.on("timeout", () => req.destroy(new Error("timed out")));
+      req.on("error", reject);
+      req.end();
+    });
   }
 }
