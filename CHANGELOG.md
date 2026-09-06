@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### ChatGPT
+
+- `search` and `fetch` tools implementing ChatGPT's connector contract (`structuredContent` mirrored as text; citation URLs to the wiki for public/unlisted worlds, to the app for private ones). ChatGPT's regular connectors and deep research work; developer mode exposes every tool.
+
 ### MCP OAuth
 
 - **Client ID Metadata Documents** (the registration method MCP recommends and claude.ai prefers): `https` client ids are resolved to their metadata document with an SSRF-hardened fetch (public addresses only, socket pinned to the validated address, no redirects, 5 s / 64 KiB limits), cached for an hour. Advertised via `client_id_metadata_document_supported`. Dynamic registration remains available.

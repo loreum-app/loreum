@@ -787,24 +787,26 @@ All tools are scoped to the credential's project; there is no `projectSlug` para
 
 Read (all credentials):
 
-| Tool                 | Input                            | Returns                                                   |
-| -------------------- | -------------------------------- | --------------------------------------------------------- |
-| `get_project`        | —                                | Name, description, timeline settings, content counts      |
-| `search_project`     | `query`, `types?`, `limit?`      | Entities, lore, timeline events, scenes with excerpts     |
-| `list_entities`      | `type?`, `q?`                    | Entities with type fields and tags                        |
-| `get_entity`         | `entitySlug`                     | Entity hub: relationships, events, lore, tags, membership |
-| `get_entity_types`   | —                                | Custom item types and field schemas                       |
-| `list_tags`          | —                                | Tags                                                      |
-| `list_relationships` | `entitySlug?`                    | Graph edges                                               |
-| `list_lore_articles` | `q?`, `category?`, `entitySlug?` | Article summaries                                         |
-| `get_lore_article`   | `articleSlug`                    | Full article                                              |
-| `get_timeline`       | `entitySlug?`, `significance?`   | Events in order                                           |
-| `get_timeline_event` | `eventId`                        | One event                                                 |
-| `list_eras`          | —                                | Eras                                                      |
-| `get_storyboard`     | —                                | Plotlines + works with chapters                           |
-| `get_plotline`       | `plotlineSlug`                   | Plotline with plot points                                 |
-| `get_work`           | `workSlug`                       | Work with chapters                                        |
-| `list_scenes`        | `chapterId`                      | Scenes with prose, POV, location, plotline                |
+| Tool                 | Input                            | Returns                                                                                                               |
+| -------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `get_project`        | —                                | Name, description, timeline settings, content counts                                                                  |
+| `search_project`     | `query`, `types?`, `limit?`      | Entities, lore, timeline events, scenes with excerpts                                                                 |
+| `list_entities`      | `type?`, `q?`                    | Entities with type fields and tags                                                                                    |
+| `get_entity`         | `entitySlug`                     | Entity hub: relationships, events, lore, tags, membership                                                             |
+| `get_entity_types`   | —                                | Custom item types and field schemas                                                                                   |
+| `list_tags`          | —                                | Tags                                                                                                                  |
+| `search`             | `query`                          | ChatGPT connector contract: `{ results: [{ id, title, url }] }` as structuredContent + text                           |
+| `fetch`              | `id`                             | ChatGPT connector contract: `{ id, title, text, url, metadata }` for `entity:` / `lore:` / `timeline:` / `scene:` ids |
+| `list_relationships` | `entitySlug?`                    | Graph edges                                                                                                           |
+| `list_lore_articles` | `q?`, `category?`, `entitySlug?` | Article summaries                                                                                                     |
+| `get_lore_article`   | `articleSlug`                    | Full article                                                                                                          |
+| `get_timeline`       | `entitySlug?`, `significance?`   | Events in order                                                                                                       |
+| `get_timeline_event` | `eventId`                        | One event                                                                                                             |
+| `list_eras`          | —                                | Eras                                                                                                                  |
+| `get_storyboard`     | —                                | Plotlines + works with chapters                                                                                       |
+| `get_plotline`       | `plotlineSlug`                   | Plotline with plot points                                                                                             |
+| `get_work`           | `workSlug`                       | Work with chapters                                                                                                    |
+| `list_scenes`        | `chapterId`                      | Scenes with prose, POV, location, plotline                                                                            |
 
 Write (`READ_WRITE` only): `create_entity`, `update_entity`, `delete_entity`, `create_relationship`, `update_relationship`, `delete_relationship`, `create_lore_article`, `update_lore_article`, `delete_lore_article`, `create_timeline_event`, `update_timeline_event`, `delete_timeline_event`, `create_era`, `create_plotline`, `create_plot_point`, `update_plot_point`, `create_work`, `create_chapter`, `create_scene`, `update_scene`. Inputs mirror the REST DTOs (entities and lore articles accept `tags`, which are created on demand; scenes accept `content` prose). Delete tools are annotated destructive.
 

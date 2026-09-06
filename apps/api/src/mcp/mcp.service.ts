@@ -19,6 +19,7 @@ import { TimelineService } from "../timeline/timeline.service";
 import { ErasService } from "../timeline/eras.service";
 import { TagsService } from "../tags/tags.service";
 import { SearchService } from "../search/search.service";
+import { AppConfig } from "../config/app.config";
 import { McpAuthContext } from "../oauth/oauth.types";
 import { mcpContextFromAuthInfo } from "./mcp-auth.guard";
 import { ToolRegistrar } from "./tool-utils";
@@ -28,6 +29,7 @@ import { registerRelationshipTools } from "./tools/relationship.tools";
 import { registerLoreTools } from "./tools/lore.tools";
 import { registerTimelineTools } from "./tools/timeline.tools";
 import { registerStoryboardTools } from "./tools/storyboard.tools";
+import { registerChatGptTools } from "./tools/chatgpt.tools";
 
 export const MCP_SERVER_NAME = "loreum";
 export const MCP_SERVER_VERSION = "0.2.0";
@@ -59,6 +61,7 @@ export class McpService implements OnModuleInit, OnModuleDestroy {
     private erasService: ErasService,
     private tagsService: TagsService,
     private searchService: SearchService,
+    private config: AppConfig,
   ) {}
 
   onModuleInit() {
@@ -119,6 +122,16 @@ export class McpService implements OnModuleInit, OnModuleDestroy {
       search: this.searchService,
       entityTypes: this.entityTypesService,
       tags: this.tagsService,
+    });
+    // ChatGPT's connector contract (`search` / `fetch`) sits right after the
+    // orientation tools so every client sees the same stable order.
+    registerChatGptTools(reg, ctx, {
+      search: this.searchService,
+      entities: this.entitiesService,
+      lore: this.loreService,
+      timeline: this.timelineService,
+      storyboard: this.storyboardService,
+      webUrl: this.config.webUrl,
     });
     registerEntityTools(reg, ctx, this.entitiesService);
     registerRelationshipTools(reg, ctx, this.relationshipsService);

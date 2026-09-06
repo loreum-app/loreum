@@ -29,6 +29,10 @@ const READ_TOOLS: [string, string][] = [
   ],
   ["get_entity_types", "Custom item types and their field schemas"],
   ["list_tags", "All tags in the world"],
+  [
+    "search / fetch",
+    "ChatGPT connector contract: search hits with citation URLs, and full documents by id",
+  ],
   ["list_relationships", "Graph edges, optionally for one entity"],
   [
     "list_lore_articles",
@@ -152,6 +156,16 @@ export default function McpDocsPage() {
             <code>/mcp</code>). Tokens are refreshed in the background.
           </p>
 
+          <h3 className="mt-6 text-base font-medium">ChatGPT</h3>
+          <p className="text-sm text-muted-foreground">
+            Settings → Connectors → <b>Create</b>: name it, paste your
+            world&apos;s MCP URL, choose OAuth, then approve on the Loreum page
+            that opens. ChatGPT&apos;s standard connectors and deep research use
+            the <code>search</code> and <code>fetch</code> tools (with citation
+            links back to your world); enable <b>Developer mode</b> under
+            Connectors → Advanced to use every tool.
+          </p>
+
           <h3 className="mt-6 text-base font-medium">Cursor</h3>
           <p className="text-sm text-muted-foreground">
             Add to <code>.cursor/mcp.json</code>; Cursor handles the sign-in
@@ -168,9 +182,9 @@ export default function McpDocsPage() {
           <h3 className="mt-6 text-base font-medium">Other clients</h3>
           <p className="text-sm text-muted-foreground">
             Any client that speaks MCP over Streamable HTTP and supports OAuth
-            will work the same way (ChatGPT developer mode, Windsurf, VS Code,
-            the MCP Inspector). Clients that only support fixed headers can use
-            an API key instead, see below.
+            will work the same way (Windsurf, VS Code, the MCP Inspector).
+            Clients that only support fixed headers can use an API key instead,
+            see below.
           </p>
         </section>
 
