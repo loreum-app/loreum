@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-05
+
 ### MCP: OAuth connectors, SDK v2, full tool surface
 
 - **Per-project MCP URL** `/v1/mcp/:projectSlug`; the URL is the OAuth resource so tokens for one world are rejected by every other world. Legacy `/v1/mcp` kept for API keys.

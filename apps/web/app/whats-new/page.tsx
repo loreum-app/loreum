@@ -3,7 +3,7 @@
 const releases = [
   {
     version: "0.2.0",
-    date: "Coming soon",
+    date: "September 2026",
     title: "AI Integration",
     highlights: [
       "Style guide with voice, tone, POV, pacing, dialogue rules, and character voice notes",
