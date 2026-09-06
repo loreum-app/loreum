@@ -120,6 +120,7 @@ export class McpAuthGuard implements CanActivate {
         projectId: key.project.id,
         projectSlug: key.project.slug,
         ownerId: key.project.ownerId,
+        projectVisibility: key.project.visibility,
         permissions: key.permissions,
         scopes: scopesForPermission(key.permissions),
         resource: null,

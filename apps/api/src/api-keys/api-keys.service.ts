@@ -90,7 +90,9 @@ export class ApiKeysService {
     const apiKey = await this.prisma.apiKey.findUnique({
       where: { keyHash: hashKey(rawKey) },
       include: {
-        project: { select: { id: true, slug: true, ownerId: true } },
+        project: {
+          select: { id: true, slug: true, ownerId: true, visibility: true },
+        },
       },
     });
 

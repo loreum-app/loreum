@@ -5,6 +5,7 @@ import { McpAuthContext } from "../oauth/oauth.types";
 
 export interface ToolResult {
   content: { type: "text"; text: string }[];
+  structuredContent?: Record<string, unknown>;
   isError?: boolean;
 }
 
@@ -58,6 +59,17 @@ export function jsonResult(data: unknown): ToolResult {
 
 export function textResult(text: string): ToolResult {
   return brand({ content: [{ type: "text", text }] });
+}
+
+/**
+ * Result with both `structuredContent` and the same JSON as text. ChatGPT's
+ * connector tools (`search` / `fetch`) require this exact pairing.
+ */
+export function structuredResult(data: Record<string, unknown>): ToolResult {
+  return brand({
+    content: [{ type: "text", text: JSON.stringify(data) }],
+    structuredContent: data,
+  });
 }
 
 /**

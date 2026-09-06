@@ -28,6 +28,8 @@ export interface McpAuthContext {
   projectId: string;
   projectSlug: string;
   ownerId: string;
+  /** Drives citation URLs: public/unlisted worlds link to the wiki. */
+  projectVisibility: "PRIVATE" | "PUBLIC" | "UNLISTED";
   permissions: ApiKeyPermission;
   scopes: McpScope[];
   /** RFC 8707 audience the credential was issued for (OAuth only). */

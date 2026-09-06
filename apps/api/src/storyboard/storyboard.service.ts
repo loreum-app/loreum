@@ -440,6 +440,33 @@ export class StoryboardService {
     return scene;
   }
 
+  async findSceneById(projectId: string, id: string) {
+    const scene = await this.prisma.scene.findFirst({
+      where: { id, chapter: { work: { projectId } } },
+      include: {
+        chapter: {
+          select: {
+            id: true,
+            title: true,
+            sequenceNumber: true,
+            work: { select: { id: true, title: true, slug: true } },
+          },
+        },
+        plotline: { select: { id: true, name: true, slug: true } },
+        location: { select: { id: true, name: true, slug: true } },
+        characters: {
+          select: {
+            role: true,
+            isPov: true,
+            entity: { select: { id: true, name: true, slug: true } },
+          },
+        },
+      },
+    });
+    if (!scene) throw new NotFoundException("Scene not found");
+    return scene;
+  }
+
   async findScenesByChapter(projectId: string, chapterId: string) {
     return this.prisma.scene.findMany({
       where: { chapterId, chapter: { work: { projectId } } },

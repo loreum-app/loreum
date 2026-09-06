@@ -98,7 +98,9 @@ export class ConnectionsService {
         connection: {
           include: {
             client: { select: { clientId: true, name: true } },
-            project: { select: { id: true, slug: true, ownerId: true } },
+            project: {
+              select: { id: true, slug: true, ownerId: true, visibility: true },
+            },
           },
         },
       },
@@ -122,6 +124,7 @@ export class ConnectionsService {
       projectId: conn.project.id,
       projectSlug: conn.project.slug,
       ownerId: conn.project.ownerId,
+      projectVisibility: conn.project.visibility,
       permissions: conn.permissions,
       scopes: conn.scopes as McpScope[],
       resource: conn.resource,

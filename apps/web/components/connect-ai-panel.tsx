@@ -20,11 +20,12 @@ interface Connection {
   createdAt: string;
 }
 
-type ClientTab = "claude" | "claude-code" | "cursor" | "other";
+type ClientTab = "claude" | "claude-code" | "chatgpt" | "cursor" | "other";
 
 const TABS: { id: ClientTab; label: string }[] = [
   { id: "claude", label: "Claude" },
   { id: "claude-code", label: "Claude Code" },
+  { id: "chatgpt", label: "ChatGPT" },
   { id: "cursor", label: "Cursor" },
   { id: "other", label: "Other clients" },
 ];
@@ -146,6 +147,27 @@ export function ConnectAiPanel({ projectSlug }: { projectSlug: string }) {
             </div>
           )}
 
+          {tab === "chatgpt" && (
+            <Steps
+              intro="ChatGPT connects with the same URL and signs in through Loreum. Its standard connectors use the search and fetch tools; developer mode exposes every tool."
+              steps={[
+                <>
+                  In ChatGPT open <b>Settings</b> → <b>Connectors</b> (turn on{" "}
+                  <b>Developer mode</b> under Advanced to see all tools).
+                </>,
+                <>
+                  Choose <b>Create</b>, give it a name, paste the URL above, and
+                  pick <b>OAuth</b> for authentication.
+                </>,
+                <>Save, then approve access on the Loreum page that opens.</>,
+                <>
+                  Enable the connector in a chat (or in deep research) and ask
+                  about your world.
+                </>,
+              ]}
+            />
+          )}
+
           {tab === "cursor" && (
             <div className="space-y-3 text-sm">
               <p className="text-muted-foreground">
@@ -168,10 +190,10 @@ export function ConnectAiPanel({ projectSlug }: { projectSlug: string }) {
             <div className="space-y-3 text-sm">
               <p className="text-muted-foreground">
                 Any client that speaks MCP over Streamable HTTP works. Clients
-                that support OAuth (ChatGPT developer mode, Windsurf, VS Code,
-                the MCP Inspector…) discover Loreum&apos;s sign-in flow from the
-                URL alone. Clients that only support static headers can use an
-                API key from the section below:
+                that support OAuth (Windsurf, VS Code, the MCP Inspector…)
+                discover Loreum&apos;s sign-in flow from the URL alone. Clients
+                that only support static headers can use an API key from the
+                section below:
               </p>
               <CopyBlock
                 value={JSON.stringify(
