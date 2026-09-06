@@ -1,5 +1,6 @@
 import { Injectable, Logger, NestMiddleware } from "@nestjs/common";
 import { NextFunction, Request, Response } from "express";
+import { extractBearerToken } from "../common/utils/bearer";
 
 /**
  * One log line per MCP HTTP exchange, written when the response finishes.
@@ -13,14 +14,16 @@ export class McpAccessLogMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction) {
     const started = Date.now();
-    const auth = req.headers.authorization;
-    const cred = !auth
+    const token = extractBearerToken(req.headers.authorization);
+    const cred = !req.headers.authorization
       ? "none"
-      : auth.startsWith("Bearer lrma_")
-        ? "oauth"
-        : auth.startsWith("Bearer lrm_")
-          ? "api-key"
-          : "other";
+      : !token
+        ? "non-bearer"
+        : token.startsWith("lrma_")
+          ? "oauth"
+          : token.startsWith("lrm_")
+            ? "api-key"
+            : "unknown-prefix";
     const body = req.body as
       { method?: string; id?: unknown; params?: { name?: string } } | undefined;
     const rpc =

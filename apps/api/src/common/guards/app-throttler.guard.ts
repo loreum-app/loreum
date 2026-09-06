@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { ThrottlerGuard } from "@nestjs/throttler";
 import * as crypto from "crypto";
 import { Request } from "express";
+import { extractBearerToken } from "../utils/bearer";
 
 /**
  * Global rate limiter. Bearer-authenticated traffic (MCP clients, API keys)
@@ -17,15 +18,12 @@ export class AppThrottlerGuard extends ThrottlerGuard {
   }
 
   protected async getTracker(req: Request): Promise<string> {
-    const header = req.headers.authorization;
-    if (header?.startsWith("Bearer ")) {
-      const token = header.slice(7).trim();
-      if (token) {
-        return (
-          "bearer:" +
-          crypto.createHash("sha256").update(token).digest("hex").slice(0, 32)
-        );
-      }
+    const token = extractBearerToken(req.headers.authorization);
+    if (token) {
+      return (
+        "bearer:" +
+        crypto.createHash("sha256").update(token).digest("hex").slice(0, 32)
+      );
     }
     return req.ip ?? "unknown";
   }
