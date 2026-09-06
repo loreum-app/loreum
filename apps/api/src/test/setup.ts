@@ -16,3 +16,7 @@ process.env.GOOGLE_CALLBACK_URL =
   "http://localhost:3021/v1/auth/google/callback";
 process.env.CORS_ORIGIN = "http://localhost:3020";
 process.env.API_PORT = "3021";
+process.env.PUBLIC_API_URL = "http://localhost:3021";
+process.env.WEB_URL = "http://localhost:3020";
+process.env.BILLING_ENABLED = "false";
+process.env.THROTTLE_DISABLED = "true";

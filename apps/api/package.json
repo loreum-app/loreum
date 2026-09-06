@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
-    "start": "node dist/main",
+    "start": "node dist/src/main",
     "lint": "eslint --max-warnings 25",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@loreum/types": "workspace:*",
+    "@modelcontextprotocol/node": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.1.17",
     "@nestjs/config": "^4.0.3",
@@ -43,10 +45,12 @@
     "passport-jwt": "^4.0.1",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@loreum/typescript-config": "workspace:*",
+    "@modelcontextprotocol/client": "2.0.0",
     "@nestjs/cli": "^11.0.7",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",

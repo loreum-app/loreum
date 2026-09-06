@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+### MCP: OAuth connectors, SDK v2, full tool surface
+
+- **Per-project MCP URL** `/v1/mcp/:projectSlug`; the URL is the OAuth resource so tokens for one world are rejected by every other world. Legacy `/v1/mcp` kept for API keys.
+- **OAuth 2.1 authorization server** in the API: RFC 8414/9728 discovery, RFC 7591 dynamic client registration, PKCE S256, single-use codes consumed atomically, opaque hashed access/refresh tokens, rotating refresh with reuse detection (revokes the connection), RFC 7009 revocation, RFC 9207 `iss`, loopback redirect matching for Claude Code. 401s advertise `WWW-Authenticate: Bearer resource_metadata=…` so claude.ai, Claude Code, and Cursor connect from the URL alone.
+- **Consent page** (`/authorize`) in the web app with world and permission choice; Google sign-in honours `return_to`.
+- **Connected apps** list + disconnect in project settings; new "Connect AI" panel with per-client instructions. API keys repositioned as the fallback for scripts/header-only clients.
+- **MCP SDK v2** (`@modelcontextprotocol/server` + `node`): stateless `createMcpHandler`, serves protocol 2026-07-28 and 2025-era clients.
+- **Tools**: 16 read + 20 write tools with titles, read-only/destructive annotations, deterministic ordering, slimmed responses, error shaping; read-only credentials never see write tools. New: eras, plotlines, works, chapters, scenes (with prose), tags on entities (auto-created), cross-content `search_project` (entities, lore, timeline, scenes) also backing `GET /projects/:slug/search`.
+- **Security**: cross-project reference checks on raw-id fields (timeline events, scenes, item types, maps, parent organizations); rate limiting per credential instead of per IP for bearer traffic; CORS opened only for OAuth/MCP paths.
+- **Billing switch**: `Subscription` model, `EntitlementsService` with plan feature/limit table, `BILLING_ENABLED=false` by default (no payment provider).
+- **Schema**: `OAuthClient`, `OAuthAuthorizationCode`, `McpConnection`, `OAuthAccessToken`, `OAuthRefreshToken`, `Subscription` (+ `Plan`, `SubscriptionStatus`). Migration `20260905120000_mcp_oauth_connections`.
+- **Config**: `PUBLIC_API_URL`, `WEB_URL`, `OAUTH_*`, `BILLING_ENABLED`.
+- **Tests**: 50 new integration tests covering the OAuth flow, audience binding, refresh rotation, revocation, tool visibility, and a full world-building round trip.
+
 ### MCP Authentication & Review Queue
 
 - **API key model**: `ApiKey` table with project scoping, bcrypt-hashed keys, read-only/read-write permissions, expiration, revocation, last-used tracking

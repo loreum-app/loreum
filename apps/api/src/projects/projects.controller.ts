@@ -19,6 +19,11 @@ import { ApiKeyAuthGuard } from "../auth/guards/api-key-auth.guard";
 import { User } from "../auth/decorators/user.decorator";
 import { AuthUser } from "../auth/types/jwt.types";
 import { ProjectsService } from "./projects.service";
+import {
+  SEARCH_KINDS,
+  SearchKind,
+  SearchService,
+} from "../search/search.service";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
 
@@ -27,7 +32,10 @@ import { UpdateProjectDto } from "./dto/update-project.dto";
 @UseGuards(ApiKeyAuthGuard)
 @ApiCookieAuth("auth_token")
 export class ProjectsController {
-  constructor(private projectsService: ProjectsService) {}
+  constructor(
+    private projectsService: ProjectsService,
+    private searchService: SearchService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: "Create a new project" })
@@ -43,15 +51,28 @@ export class ProjectsController {
 
   @Get(":slug/search")
   @ApiOperation({
-    summary: "Search across project content (stub — OpenSearch pending)",
+    summary: "Search entities, lore, timeline events, and scenes in a project",
   })
   async search(
     @Param("slug") slug: string,
     @User() user: AuthUser,
     @Query("q") q?: string,
+    @Query("types") types?: string,
+    @Query("limit") limit?: number,
   ) {
-    await this.projectsService.findBySlug(slug, user.id);
-    return { results: [], query: q ?? "", total: 0 };
+    const project = await this.projectsService.findBySlug(slug, user.id);
+    const kinds = (types ?? "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t): t is SearchKind =>
+        (SEARCH_KINDS as readonly string[]).includes(t),
+      );
+    const result = await this.searchService.search(project.id, {
+      q: q ?? "",
+      types: kinds,
+      limit,
+    });
+    return { ...result, query: q ?? "" };
   }
 
   @Get(":slug/graph-layout")

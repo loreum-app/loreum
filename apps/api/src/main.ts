@@ -1,18 +1,22 @@
 import { NestFactory } from "@nestjs/core";
-import { ValidationPipe } from "@nestjs/common";
+import { RequestMethod, ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { AppConfig } from "./config/app.config";
 import { PrismaExceptionFilter } from "./common/filters/prisma-exception.filter";
+import { corsOptionsDelegate } from "./common/cors";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(AppConfig);
 
-  // Global prefix
-  app.setGlobalPrefix("v1");
+  // Global prefix. OAuth discovery documents must live at the origin root
+  // (RFC 8414 / RFC 9728), so they are excluded.
+  app.setGlobalPrefix("v1", {
+    exclude: [{ path: ".well-known/*path", method: RequestMethod.GET }],
+  });
 
   // Cookie parser
   app.use(cookieParser());
@@ -70,12 +74,10 @@ async function bootstrap() {
     }),
   );
 
-  // CORS
-  app.enableCors({
-    origin: config.api.corsOrigin,
-    credentials: true,
-    allowedHeaders: ["Content-Type", "x-csrf-token"],
-  });
+  // CORS. The web app gets a credentialed, single-origin policy. MCP and OAuth
+  // endpoints are bearer/PKCE based (no cookies) and must be reachable from
+  // browser-hosted MCP clients, so they are open to any origin.
+  app.enableCors(corsOptionsDelegate(config));
 
   // Exception filters
   app.useGlobalFilters(new PrismaExceptionFilter());
@@ -89,8 +91,8 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger (non-production only)
-  if (config.isDevelopment) {
+  // Swagger (requires ENABLE_SWAGGER=true, never in production)
+  if (config.enableSwagger) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle("Loreum API")
       .setDescription("Worldbuilding and story planning platform API")
@@ -105,7 +107,9 @@ async function bootstrap() {
 
   await app.listen(config.api.port);
   console.log(`Loreum API running on http://localhost:${config.api.port}`);
-  if (config.isDevelopment) {
+  console.log(`MCP endpoint: ${config.mcp.resourceUrl("<project-slug>")}`);
+  console.log(`OAuth issuer: ${config.mcp.issuer}`);
+  if (config.enableSwagger) {
     console.log(`Swagger docs: http://localhost:${config.api.port}/docs`);
   }
 }

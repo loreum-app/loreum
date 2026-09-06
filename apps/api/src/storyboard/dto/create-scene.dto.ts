@@ -21,6 +21,11 @@ export class CreateSceneDto implements CreateSceneRequest {
   @IsString()
   description?: string;
 
+  @ApiPropertyOptional({ description: "Narrative prose of the scene" })
+  @IsOptional()
+  @IsString()
+  content?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

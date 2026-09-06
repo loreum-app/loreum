@@ -4,15 +4,31 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { EntitlementsService } from "../billing/entitlements.service";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
 import { slugify } from "../common/utils/slug";
 
 @Injectable()
 export class ProjectsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private entitlements: EntitlementsService,
+  ) {}
 
   async create(userId: string, dto: CreateProjectDto) {
+    const { maxProjects } = await this.entitlements.limits(userId);
+    if (maxProjects !== null) {
+      const count = await this.prisma.project.count({
+        where: { ownerId: userId },
+      });
+      if (count >= maxProjects) {
+        throw new ForbiddenException(
+          `Your plan allows ${maxProjects} project${maxProjects === 1 ? "" : "s"}. Upgrade to create more.`,
+        );
+      }
+    }
+
     const slug = await this.generateUniqueSlug(dto.name);
 
     return this.prisma.project.create({
@@ -23,6 +39,57 @@ export class ProjectsService {
         ownerId: userId,
       },
     });
+  }
+
+  /**
+   * Orientation payload for MCP clients: identity, timeline settings, and how
+   * much content of each kind exists.
+   */
+  async getSummary(projectId: string) {
+    const project = await this.prisma.project.findUniqueOrThrow({
+      where: { id: projectId },
+    });
+    const [byType, lore, events, eras, relationships, plotlines, works, tags] =
+      await Promise.all([
+        this.prisma.entity.groupBy({
+          by: ["type"],
+          where: { projectId },
+          _count: { _all: true },
+        }),
+        this.prisma.loreArticle.count({ where: { projectId } }),
+        this.prisma.timelineEvent.count({ where: { projectId } }),
+        this.prisma.era.count({ where: { projectId } }),
+        this.prisma.relationship.count({ where: { projectId } }),
+        this.prisma.plotline.count({ where: { projectId } }),
+        this.prisma.work.count({ where: { projectId } }),
+        this.prisma.tag.count({ where: { projectId } }),
+      ]);
+    const entities: Record<string, number> = {};
+    for (const row of byType) entities[row.type] = row._count._all;
+
+    return {
+      name: project.name,
+      slug: project.slug,
+      description: project.description,
+      visibility: project.visibility,
+      timeline: {
+        mode: project.timelineMode,
+        start: project.timelineStart,
+        end: project.timelineEnd,
+        labelPrefix: project.timelineLabelPrefix,
+        labelSuffix: project.timelineLabelSuffix,
+      },
+      counts: {
+        entities,
+        relationships,
+        loreArticles: lore,
+        timelineEvents: events,
+        eras,
+        plotlines,
+        works,
+        tags,
+      },
+    };
   }
 
   async findAllByUser(userId: string) {

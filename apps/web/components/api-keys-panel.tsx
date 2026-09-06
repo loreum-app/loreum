@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import Link from "next/link";
+import { api, mcpUrlForProject } from "@/lib/api";
 import { Button } from "@loreum/ui/button";
 import { Key, Trash2 } from "lucide-react";
 import { CreateApiKeyDialog } from "@/components/dialogs/create-api-key-dialog";
+import { CopyBlock, CopyField } from "@/components/connect-ai-panel";
 
 interface ApiKey {
   id: string;
@@ -24,6 +26,7 @@ interface ApiKeysPanelProps {
 }
 
 export function ApiKeysPanel({ projectSlug }: ApiKeysPanelProps) {
+  const mcpUrl = mcpUrlForProject(projectSlug);
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -66,47 +69,78 @@ export function ApiKeysPanel({ projectSlug }: ApiKeysPanelProps) {
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-medium">API Keys</h2>
+          <h2 className="flex items-center gap-2 text-lg font-medium">
+            <Key className="h-5 w-5" />
+            API keys
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Manage API keys for MCP and programmatic access.
+            For scripts, the REST API, and MCP clients that can&apos;t sign in
+            with OAuth. Most people should use <b>Connect AI</b> above instead.
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button variant="outline" onClick={() => setDialogOpen(true)}>
           <Key className="mr-2 h-4 w-4" />
           Create key
         </Button>
       </div>
 
       {revealedKey && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
-          <p className="mb-2 text-sm font-medium">
-            Copy your API key now — it won't be shown again.
-          </p>
-          <code className="block break-all rounded bg-muted px-3 py-2 text-sm">
-            {revealedKey}
-          </code>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => {
-              navigator.clipboard.writeText(revealedKey);
-            }}
-          >
-            Copy to clipboard
-          </Button>
+        <div className="mb-4 space-y-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+          <div>
+            <p className="mb-2 text-sm font-medium">
+              Copy your API key now — it won&apos;t be shown again.
+            </p>
+            <CopyField value={revealedKey} />
+          </div>
+          <div className="space-y-3 border-t border-amber-500/20 pt-4">
+            <p className="text-sm font-medium">Use it with an MCP client</p>
+            <p className="text-xs text-muted-foreground">
+              Claude Code — run this in your terminal:
+            </p>
+            <CopyBlock
+              value={`claude mcp add --transport http loreum-${projectSlug} ${mcpUrl} --header "Authorization: Bearer ${revealedKey}"`}
+            />
+            <p className="text-xs text-muted-foreground">
+              JSON-configured clients (Cursor, Windsurf, etc.):
+            </p>
+            <CopyBlock
+              value={JSON.stringify(
+                {
+                  mcpServers: {
+                    loreum: {
+                      url: mcpUrl,
+                      headers: { Authorization: `Bearer ${revealedKey}` },
+                    },
+                  },
+                },
+                null,
+                2,
+              )}
+            />
+            <p className="text-xs text-muted-foreground">
+              REST: send the same <code>Authorization</code> header to{" "}
+              <code>/v1/projects/{projectSlug}/…</code>. See the{" "}
+              <Link
+                href="/docs/mcp"
+                className="underline hover:text-foreground"
+              >
+                MCP documentation
+              </Link>
+              .
+            </p>
+          </div>
         </div>
       )}
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : keys.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <Key className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+        <div className="rounded-lg border border-dashed p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            No API keys yet. Create one to use with MCP or the API.
+            No API keys. You only need one for scripts or clients without OAuth
+            support.
           </p>
         </div>
       ) : (

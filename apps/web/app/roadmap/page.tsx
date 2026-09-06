@@ -74,10 +74,16 @@ const phases: RoadmapPhase[] = [
         status: "in-progress",
       },
       {
+        title: "OAuth connectors",
+        description:
+          "Connect claude.ai, Claude Code, and Cursor with one URL per world. PKCE, rotating refresh tokens, connected-apps management.",
+        status: "done",
+      },
+      {
         title: "API key authentication",
         description:
           "Generate project-scoped API keys for MCP. Read-only or read-write permissions, expiration, revocation.",
-        status: "planned",
+        status: "done",
       },
       {
         title: "Review queue (staging area)",
@@ -88,8 +94,8 @@ const phases: RoadmapPhase[] = [
       {
         title: "Expanded MCP tools",
         description:
-          "Timeline, lore article, scene, plot point, and style guide tools for both read and write.",
-        status: "planned",
+          "Timeline, era, lore article, scene, chapter, work, plot point tools for both read and write, plus cross-content search.",
+        status: "done",
       },
     ],
   },

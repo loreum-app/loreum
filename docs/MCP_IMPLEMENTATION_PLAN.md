@@ -3,8 +3,8 @@
 Scoped plan for completing the MCP server to a testable state. Covers API prerequisites, auth, review queue, and MCP tool expansion.
 
 **Created:** 2026-04-24
-**Updated:** 2026-04-24
-**Status:** Phases 1–2 complete, Phase 3 next
+**Updated:** 2026-09-05
+**Status:** Phases 1–3 and the OAuth phase complete (SDK v2, per-project URLs, claude.ai connectors); Phase 4 (review queue) next
 **Reference:** See TODO.md > Near-Term for task tracking
 
 ---
@@ -13,14 +13,15 @@ Scoped plan for completing the MCP server to a testable state. Covers API prereq
 
 ### What exists today
 
-The MCP server (`apps/mcp/src/index.ts`) is a single-file stdio server with:
+The MCP server is a stateless Streamable HTTP endpoint built into the API (`apps/api/src/mcp/`), served at `POST /v1/mcp`. The former stdio server (`apps/mcp/`) has been deleted. The module builds a per-request `McpServer` scoped to the authenticated API key's project, with tools calling domain services directly:
 
 - 5 read tools: `search_project`, `get_entity`, `list_entities`, `get_storyboard`, `get_entity_types`
 - 4 write tools: `create_entity`, `update_entity`, `create_relationship`, `create_lore_article`
 - 1 resource: `project_overview`
-- A simple `api()` helper that throws on HTTP errors
-- Auth via `MCP_API_TOKEN` env var (API key with `lrm_` prefix, Bearer token)
+- Auth via `Authorization: Bearer lrm_...` header (project API key)
 - API key system with generate/list/revoke, project-scoped permissions (READ_ONLY / READ_WRITE)
+- `ApiKeyAuthGuard` enforces project scoping (key only works on its own project) and READ_ONLY method restrictions on REST routes; MCP write tools check permissions per tool
+- `search_project` merges entity + lore name/content queries via Prisma (real results; OpenSearch full-text is still long-term)
 
 ### What's done
 
@@ -40,9 +41,9 @@ The MCP server (`apps/mcp/src/index.ts`) is a single-file stdio server with:
 
 ### What's remaining
 
-**Read tool coverage is thin:** Only 5 of ~17 useful read tools exist. Missing: project navigation, relationships, timeline/eras, lore articles, tags, plotline/work/scene detail. An AI can't fully explore a world yet.
+**Read tool coverage is thin:** Only 5 of ~17 useful read tools exist. Missing: relationships, timeline/eras, lore articles, tags, plotline/work/scene detail. An AI can't fully explore a world yet.
 
-**Search is a stub:** The `search_project` tool calls the endpoint but always gets empty results. Needs a real Prisma `contains` implementation across entities, lore, timeline, and scenes.
+**Search covers entities + lore only:** The `search_project` tool queries entity names and lore content via Prisma `contains`. Timeline events and scenes aren't searched yet, and the REST `GET /projects/:slug/search` endpoint is still a stub.
 
 **Write tools bypass review queue:** All mutation tools write directly to the DB. The spec requires all MCP writes to go through `PendingChange` staging.
 
@@ -75,45 +76,49 @@ The MCP server (`apps/mcp/src/index.ts`) is a single-file stdio server with:
 - `GET /projects/:slug/storyboard` — overview with plotlines + works/chapters/scene counts
 - Removed `get_entity_hub` MCP tool (entity detail endpoint covers it)
 
-### Phase 3: Complete MCP Read Tools + Search
+### Phase 3: Complete MCP Read Tools + Search — COMPLETE
 
-**Goal:** Full read coverage — every content type in Loreum is readable via MCP, and search actually works.
+Delivered 2026-09-05: `SearchService` (entities, lore, timeline events, scenes) behind both `GET /projects/:slug/search` and `search_project`; 16 read tools; 20 write tools (incl. eras, plotlines, works, chapters, scenes with prose); tool annotations, deterministic ordering, error shaping, response slimming; tags on entities.
 
-**Scope:** MCP tools in `apps/mcp/`, plus API work for search.
+### Phase 3b: OAuth 2.1 + SDK v2 — COMPLETE
 
-#### 3a. Search implementation (`apps/api/`)
+Delivered 2026-09-05 (see `apps/api/src/oauth/`, `apps/api/src/mcp/`):
 
-The search endpoint is currently a stub returning empty results. Implement basic Prisma `contains` search across all content types:
+- Per-project MCP URL `/v1/mcp/:projectSlug` as the RFC 8707 resource; `McpAuthGuard` enforces audience binding for OAuth tokens and project match for API keys, and advertises `WWW-Authenticate: Bearer resource_metadata=…` on 401.
+- Authorization server: RFC 8414 / 9728 discovery, RFC 7591 registration, PKCE S256, single-use codes consumed atomically, opaque hashed tokens, rotating refresh tokens with reuse → connection revocation, RFC 7009 revocation, RFC 9207 `iss`.
+- Web consent page (`/authorize`) with project + permission choice; Google sign-in `return_to`; connected-apps list and disconnect in project settings.
+- Migrated to `@modelcontextprotocol/server` v2 (`createMcpHandler`, stateless), serving 2026-07-28 and 2025-era clients.
 
-- Query entities (name, summary, description), lore articles (title, content), timeline events (title, description), scenes (title, content)
-- Filter by `types` array (entity, lore, timeline, scene)
-- Return unified result format: `{ results: [{ type, slug, name/title, excerpt }], total }`
-- Prisma `contains` is sufficient for now (OpenSearch is long-term)
+Original Phase 3 scope for reference:
 
-#### 3b. New MCP read tools (`apps/mcp/`)
+**Goal:** Full read coverage — every content type in Loreum is readable via MCP, and search covers all content types.
 
-All API endpoints already exist. MCP-side only.
+**Scope:** `apps/api/src/mcp/` (tools call domain services directly).
 
-| Tool                 | API Endpoint                                         | Notes                                              |
-| -------------------- | ---------------------------------------------------- | -------------------------------------------------- |
-| `list_projects`      | `GET /projects`                                      | List user's projects                               |
-| `get_project`        | `GET /projects/:slug`                                | Project detail (replaces resource-only access)     |
-| `list_relationships` | `GET /projects/:slug/relationships?entity=`          | Relationships, optionally filtered by entity       |
-| `get_timeline`       | `GET /projects/:slug/timeline?entity=&significance=` | Timeline events with optional filters              |
-| `get_timeline_event` | `GET /projects/:slug/timeline/:id`                   | Single event detail                                |
-| `list_eras`          | `GET /projects/:slug/timeline/eras`                  | Eras for a project                                 |
-| `list_lore_articles` | `GET /projects/:slug/lore?q=&category=&entity=`      | Filter lore articles                               |
-| `get_lore_article`   | `GET /projects/:slug/lore/:slug`                     | Single lore article                                |
-| `list_tags`          | `GET /projects/:slug/tags`                           | All tags in a project                              |
-| `get_plotline`       | `GET /projects/:slug/storyboard/plotlines/:slug`     | Plotline with plot points                          |
-| `get_work`           | `GET /projects/:slug/storyboard/works/:slug`         | Work with chapters and scene structure             |
-| `list_scenes`        | `GET /projects/:slug/storyboard/scenes?chapterId=`   | Scenes in a chapter (the actual narrative content) |
+#### 3a. Search expansion
+
+`search_project` currently queries entities and lore. Extend to timeline events (title, description) and scenes (title, content), with `types` filter values `entity`, `lore`, `timeline`, `scene` and a unified result format `{ results: [{ kind, slug, name/title, excerpt }], total }`. Prisma `contains` is sufficient for now (OpenSearch is long-term).
+
+#### 3b. New MCP read tools
+
+All domain services already exist. MCP module only.
+
+| Tool                 | Service call                            | Notes                                              |
+| -------------------- | --------------------------------------- | -------------------------------------------------- |
+| `list_relationships` | `RelationshipsService.findAllByProject` | Relationships, optionally filtered by entity       |
+| `get_timeline`       | `TimelineService.findAllByProject`      | Timeline events with optional filters              |
+| `list_eras`          | `ErasService.findAllByProject`          | Eras for a project                                 |
+| `list_lore_articles` | `LoreService.findAllByProject`          | Filter lore articles                               |
+| `get_lore_article`   | `LoreService.findBySlug`                | Single lore article                                |
+| `list_tags`          | `TagsService.findAllByProject`          | All tags in a project                              |
+| `get_plotline`       | `StoryboardService.findPlotlineBySlug`  | Plotline with plot points                          |
+| `get_work`           | `StoryboardService.findWorkBySlug`      | Work with chapters and scene structure             |
+| `list_scenes`        | `StoryboardService.findScenesByChapter` | Scenes in a chapter (the actual narrative content) |
 
 #### 3c. Quality pass
 
 - Improve tool descriptions (clear, specific, no jargon)
 - Add response shaping (strip `createdAt`/`updatedAt`/internal IDs where noisy, flatten nesting)
-- Fix `api()` error handling (return structured MCP errors instead of throwing)
 
 **Test gate:** From Claude Desktop, an AI can navigate from projects → entities → relationships → lore → timeline → storyboard scenes without hitting any dead ends. Search returns real results.
 
@@ -139,14 +144,12 @@ All API endpoints already exist. MCP-side only.
    - `POST /projects/:slug/pending-changes/:id/reject`
    - `POST /projects/:slug/pending-changes/batch-accept` (body: `{ batchId }`)
 
-#### MCP work (`apps/mcp/`)
+#### MCP work (`apps/api/src/mcp/`)
 
 3. Update existing write tools (`create_entity`, `update_entity`, `create_relationship`, `create_lore_article`) to:
-   - Call a new pending change endpoint instead of the direct CRUD endpoint
+   - Call the PendingChange service instead of the direct CRUD services
    - Return confirmation that the change was staged, not applied
    - Include `batchId` (generated per MCP session or conversation)
-
-4. Update `api()` helper to return structured MCP errors instead of throwing (if not done in Phase 3)
 
 #### Web UI work (`apps/web/`)
 
@@ -184,17 +187,13 @@ All API endpoints already exist. MCP-side only.
 These are explicitly deferred and should not be built during this work:
 
 - **Style Guide MCP tools** (`get_style_guide`, `set_style_guide`) — blocked on Style Guide model/migration/service/controller which is long-term work
-- **Streamable HTTP transport** — stdio is sufficient for testing; HTTP transport is a follow-up
-- **OAuth2 discovery endpoint** — depends on HTTP transport
-- **Redis rate limiting** — not needed until remote HTTP transport exists
-- **Permission-scoped tool filtering** — nice-to-have after auth works, not required for testability
+- **CIMD client registration** — follow-up to DCR (needs SSRF-hardened metadata fetch)
 
 ---
 
 ## Architecture Boundaries
 
-- The MCP server is an HTTP client to the API. It does NOT import services or access the database directly.
-- API endpoint work (search, hub, storyboard, auth, review queue) happens in `apps/api/`.
-- MCP tool work (handlers, response shaping, error handling) happens in `apps/mcp/`.
+- The MCP endpoint lives in `apps/api/src/mcp/` and calls domain services directly — it does NOT go through HTTP or the REST controllers.
+- The MCP layer contains no business logic. If a handler needs an if/else that makes a domain decision, it belongs in the domain service.
+- Tool handlers do: input schema (zod) → service call → JSON response shaping. Nothing else.
 - Review queue UI work happens in `apps/web/`.
-- The MCP server contains no business logic. If a handler needs an if/else that makes a domain decision, it belongs in the API.

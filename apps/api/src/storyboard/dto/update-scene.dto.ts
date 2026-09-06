@@ -17,6 +17,11 @@ export class UpdateSceneDto {
   @IsString()
   description?: string | null;
 
+  @ApiPropertyOptional({ description: "Narrative prose of the scene" })
+  @IsOptional()
+  @IsString()
+  content?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
