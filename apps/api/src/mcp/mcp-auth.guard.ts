@@ -137,6 +137,9 @@ export class McpAuthGuard implements CanActivate {
     error: "invalid_request" | "invalid_token",
     description: string,
   ): never {
+    this.logger.warn(
+      `deny ${slug ? `/v1/mcp/${slug}` : "/v1/mcp"}: ${error} — ${description}`,
+    );
     const parts = [
       'Bearer realm="loreum"',
       `error="${error}"`,

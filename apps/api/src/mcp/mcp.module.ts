@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ProjectsModule } from "../projects/projects.module";
 import { EntitiesModule } from "../entities/entities.module";
 import { EntityTypesModule } from "../entity-types/entity-types.module";
@@ -12,6 +12,7 @@ import { OAuthModule } from "../oauth/oauth.module";
 import { McpController } from "./mcp.controller";
 import { McpService } from "./mcp.service";
 import { McpAuthGuard } from "./mcp-auth.guard";
+import { McpAccessLogMiddleware } from "./mcp-access-log.middleware";
 
 @Module({
   imports: [
@@ -29,4 +30,8 @@ import { McpAuthGuard } from "./mcp-auth.guard";
   controllers: [McpController],
   providers: [McpService, McpAuthGuard],
 })
-export class McpModule {}
+export class McpModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(McpAccessLogMiddleware).forRoutes("mcp", "mcp/*path");
+  }
+}
