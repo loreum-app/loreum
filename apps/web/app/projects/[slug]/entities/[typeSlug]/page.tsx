@@ -8,14 +8,9 @@ import { Button } from "@loreum/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@loreum/ui/card";
 import { CreateEntityDialog } from "@/components/dialogs/create-entity-dialog";
 import { Plus, Box } from "lucide-react";
-import type { Entity } from "@loreum/types";
+import type { Entity, ItemType as SharedItemType } from "@loreum/types";
 
-interface ItemType {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-}
+type ItemType = Pick<SharedItemType, "id" | "name" | "slug" | "description">;
 
 export default function CustomTypePage() {
   const params = useParams<{ slug: string; typeSlug: string }>();

@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 25",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -36,10 +37,15 @@
   "devDependencies": {
     "@loreum/eslint-config": "workspace:*",
     "@loreum/typescript-config": "workspace:*",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^26.4.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^10.10.0",
-    "typescript": "6.0.3"
+    "jsdom": "^30.0.1",
+    "typescript": "6.0.3",
+    "vitest": "^5.0.0"
   }
 }

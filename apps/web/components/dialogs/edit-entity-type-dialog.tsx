@@ -22,15 +22,12 @@ import {
 import { Input } from "@loreum/ui/input";
 import { Label } from "@loreum/ui/label";
 import { Textarea } from "@loreum/ui/textarea";
+import type { ItemType } from "@loreum/types";
 
-export interface EditableEntityType {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  icon: string | null;
-  color: string | null;
-}
+export type EditableEntityType = Pick<
+  ItemType,
+  "id" | "name" | "slug" | "description" | "icon" | "color"
+>;
 
 interface DeletionImpact {
   entities: number;
