@@ -142,11 +142,13 @@ export class ProjectsService {
       where: { slug },
     });
 
-    if (!project) {
-      throw new NotFoundException(`Project not found`);
+    // A project the caller does not own is reported as missing, not forbidden:
+    // slugs are global and derived from names, so a 403 would confirm that a
+    // private world with that name exists.
+    if (!project || project.ownerId !== userId) {
+      throw new NotFoundException("Project not found");
     }
 
-    this.assertOwner(project.ownerId, userId);
     return project;
   }
 
@@ -233,12 +235,6 @@ export class ProjectsService {
       WHERE id = ${project.id}
     `;
     return patch; // $executeRaw returns an affected row count, not the updated record, which is why we return patch directly instead of the updated project.
-  }
-
-  private assertOwner(ownerId: string, userId: string) {
-    if (ownerId !== userId) {
-      throw new ForbiddenException("You do not own this project");
-    }
   }
 
   private async generateUniqueSlug(

@@ -148,7 +148,7 @@ describe("Projects (integration)", () => {
         .expect(404);
     });
 
-    it("returns 403 for another user's project", async () => {
+    it("answers 404 for another user's project, indistinguishable from a missing slug", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
         .set("Cookie", authCookie)
@@ -159,11 +159,18 @@ describe("Projects (integration)", () => {
         email: "intruder@example.com",
       });
 
-      await request(app.getHttpServer())
+      const existing = await request(app.getHttpServer())
         .get("/v1/projects/private")
         .set("Cookie", other.cookie)
         .set("x-csrf-token", other.csrfToken)
-        .expect(403);
+        .expect(404);
+      const missing = await request(app.getHttpServer())
+        .get("/v1/projects/does-not-exist")
+        .set("Cookie", other.cookie)
+        .set("x-csrf-token", other.csrfToken)
+        .expect(404);
+
+      expect(existing.body).toEqual(missing.body);
     });
   });
 
