@@ -38,13 +38,10 @@ export default async function globalSetup() {
     config({ path: path.join(apiRoot, ".env") });
   }
 
+  // The unit-test job (`test:unit`) runs with no database at all. Nothing to
+  // provision, and the guard still stops anything that tries to truncate.
   const configured = process.env.DATABASE_URL;
-  if (!configured) {
-    throw new Error(
-      "DATABASE_URL is not set. Start Postgres (docker compose up -d) and " +
-        "configure apps/api/.env before running the integration suite.",
-    );
-  }
+  if (!configured) return;
 
   // Never reuse the configured database: derive a sibling <name>_test.
   const testUrl = isTestDatabaseUrl(configured)
