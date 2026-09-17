@@ -126,7 +126,7 @@ packages/
 docs/
   PRODUCT_SPEC.md         Full feature specification
   SYSTEM_ARCHITECTURE.md  Architecture diagrams
-  API_REFERENCE.md        REST, WebSocket, MCP docs
+  API_REFERENCE.md        REST, MCP, planned real-time event docs
   USER_JOURNEYS.md        User flow documentation
   ERD.md                  Entity-relationship diagram
   DEPLOYMENT.md           Production deployment guide
@@ -139,7 +139,7 @@ docs/
 | -------------------------------------------------- | --------------------------------------------- |
 | [Product Spec](docs/PRODUCT_SPEC.md)               | Complete feature specification with tiers     |
 | [System Architecture](docs/SYSTEM_ARCHITECTURE.md) | Component, data flow, and deployment diagrams |
-| [API Reference](docs/API_REFERENCE.md)             | REST, WebSocket, and MCP tool documentation   |
+| [API Reference](docs/API_REFERENCE.md)             | REST, MCP tools, and planned real-time events |
 | [User Journeys](docs/USER_JOURNEYS.md)             | User flow documentation                       |
 | [ERD](docs/ERD.md)                                 | Entity-relationship diagram                   |
 | [Deployment](docs/DEPLOYMENT.md)                   | Production deployment guide                   |
