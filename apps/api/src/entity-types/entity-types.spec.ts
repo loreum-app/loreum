@@ -172,19 +172,29 @@ describe("Entity types (integration)", () => {
   });
 
   describe("DELETE /v1/projects/:slug/entity-types/:typeSlug", () => {
-    it("removes the type but keeps its entities, now detached from any type", async () => {
-      const weapons = await createType({ name: "Weapons" });
-      await authed(
+    const addItem = (name: string, itemTypeId: string) =>
+      authed(
         request(app.getHttpServer()).post(
           `/v1/projects/${projectSlug}/entities`,
         ),
       )
-        .send({
-          type: "ITEM",
-          name: "Sting",
-          item: { itemTypeId: weapons.body.id },
-        })
+        .send({ type: "ITEM", name, item: { itemTypeId } })
         .expect(201);
+
+    const listItems = async () => {
+      const res = await authed(
+        request(app.getHttpServer()).get(
+          `/v1/projects/${projectSlug}/entities?type=ITEM`,
+        ),
+      ).expect(200);
+      return res.body as {
+        name: string;
+        item: { itemTypeId: string | null };
+      }[];
+    };
+
+    it("deletes a type that has no entities", async () => {
+      await createType({ name: "Weapons" });
 
       await authed(
         request(app.getHttpServer()).delete(
@@ -197,18 +207,157 @@ describe("Entity types (integration)", () => {
           `/v1/projects/${projectSlug}/entity-types/weapons`,
         ),
       ).expect(404);
+    });
 
-      const entities = await authed(
+    it("refuses to delete a type that still has entities when no disposition is given", async () => {
+      const weapons = await createType({ name: "Weapons" });
+      await addItem("Sting", weapons.body.id);
+
+      const res = await authed(
+        request(app.getHttpServer()).delete(
+          `/v1/projects/${projectSlug}/entity-types/weapons`,
+        ),
+      ).expect(409);
+
+      expect(res.body.message).toMatch(/1 entity/i);
+
+      // The type and its entity both survive the refusal.
+      await authed(
         request(app.getHttpServer()).get(
-          `/v1/projects/${projectSlug}/entities?type=ITEM`,
+          `/v1/projects/${projectSlug}/entity-types/weapons`,
+        ),
+      ).expect(200);
+      expect((await listItems()).map((e) => e.name)).toEqual(["Sting"]);
+    });
+
+    it("moves the entities to another type when asked", async () => {
+      const weapons = await createType({ name: "Weapons" });
+      const relics = await createType({ name: "Relics" });
+      await addItem("Sting", weapons.body.id);
+
+      await authed(
+        request(app.getHttpServer()).delete(
+          `/v1/projects/${projectSlug}/entity-types/weapons?entities=move&to=relics`,
+        ),
+      ).expect(204);
+
+      const items = await listItems();
+      expect(items.map((e) => e.name)).toEqual(["Sting"]);
+      expect(items[0]!.item.itemTypeId).toBe(relics.body.id);
+    });
+
+    it("deletes the entities along with the type when asked", async () => {
+      const weapons = await createType({ name: "Weapons" });
+      await addItem("Sting", weapons.body.id);
+      await addItem("Glamdring", weapons.body.id);
+
+      await authed(
+        request(app.getHttpServer()).delete(
+          `/v1/projects/${projectSlug}/entity-types/weapons?entities=delete`,
+        ),
+      ).expect(204);
+
+      expect(await listItems()).toEqual([]);
+    });
+
+    it("rejects a move to a type that does not exist, changing nothing", async () => {
+      const weapons = await createType({ name: "Weapons" });
+      await addItem("Sting", weapons.body.id);
+
+      await authed(
+        request(app.getHttpServer()).delete(
+          `/v1/projects/${projectSlug}/entity-types/weapons?entities=move&to=nowhere`,
+        ),
+      ).expect(404);
+
+      await authed(
+        request(app.getHttpServer()).get(
+          `/v1/projects/${projectSlug}/entity-types/weapons`,
+        ),
+      ).expect(200);
+      expect((await listItems()).map((e) => e.name)).toEqual(["Sting"]);
+    });
+
+    it("rejects a move onto the type being deleted", async () => {
+      const weapons = await createType({ name: "Weapons" });
+      await addItem("Sting", weapons.body.id);
+
+      await authed(
+        request(app.getHttpServer()).delete(
+          `/v1/projects/${projectSlug}/entity-types/weapons?entities=move&to=weapons`,
+        ),
+      ).expect(400);
+    });
+  });
+
+  describe("GET /v1/projects/:slug/entity-types/:typeSlug/deletion-impact", () => {
+    it("counts the entities and the links that a cascade delete would remove", async () => {
+      const weapons = await createType({ name: "Weapons" });
+      const sting = await authed(
+        request(app.getHttpServer()).post(
+          `/v1/projects/${projectSlug}/entities`,
+        ),
+      )
+        .send({
+          type: "ITEM",
+          name: "Sting",
+          item: { itemTypeId: weapons.body.id },
+          tags: ["elvish"],
+        })
+        .expect(201);
+      const frodo = await authed(
+        request(app.getHttpServer()).post(
+          `/v1/projects/${projectSlug}/entities`,
+        ),
+      )
+        .send({ type: "CHARACTER", name: "Frodo" })
+        .expect(201);
+
+      await authed(
+        request(app.getHttpServer()).post(
+          `/v1/projects/${projectSlug}/relationships`,
+        ),
+      )
+        .send({
+          sourceEntitySlug: frodo.body.slug,
+          targetEntitySlug: sting.body.slug,
+          label: "carries",
+        })
+        .expect(201);
+
+      const res = await authed(
+        request(app.getHttpServer()).get(
+          `/v1/projects/${projectSlug}/entity-types/weapons/deletion-impact`,
         ),
       ).expect(200);
 
-      const sting = entities.body.find(
-        (e: { name: string }) => e.name === "Sting",
-      );
-      expect(sting).toBeDefined();
-      expect(sting.item.itemTypeId).toBeNull();
+      expect(res.body).toEqual({
+        entities: 1,
+        relationships: 1,
+        timelineEventLinks: 0,
+        loreArticleLinks: 0,
+        sceneAppearances: 0,
+        tagLinks: 1,
+      });
+    });
+
+    it("reports all zeros for a type with no entities", async () => {
+      await createType({ name: "Weapons" });
+
+      const res = await authed(
+        request(app.getHttpServer()).get(
+          `/v1/projects/${projectSlug}/entity-types/weapons/deletion-impact`,
+        ),
+      ).expect(200);
+
+      expect(res.body).toEqual({
+        entities: 0,
+        relationships: 0,
+        timelineEventLinks: 0,
+        loreArticleLinks: 0,
+        sceneAppearances: 0,
+        tagLinks: 0,
+      });
     });
   });
 });
