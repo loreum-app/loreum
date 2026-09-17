@@ -43,3 +43,6 @@ data/
 
 .claude/
 .vscode/
+
+# Playwright MCP session output (screenshots, console logs, snapshots)
+.playwright-mcp/
