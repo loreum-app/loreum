@@ -70,6 +70,12 @@ export class CreateEntityTypeDto implements CreateItemTypeRequest {
   @MaxLength(50)
   name!: string;
 
+  @ApiPropertyOptional({ example: "Weapons, armor, and other gear." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
   @ApiPropertyOptional({ example: "sword" })
   @IsOptional()
   @IsString()

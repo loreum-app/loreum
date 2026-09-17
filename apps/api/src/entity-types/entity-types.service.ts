@@ -16,6 +16,7 @@ export class EntityTypesService {
         projectId,
         name: dto.name,
         slug,
+        description: dto.description?.trim() || null,
         icon: dto.icon,
         color: dto.color,
         fieldSchema: dto.fieldSchema?.map((f) => ({ ...f })) ?? [],
@@ -48,6 +49,8 @@ export class EntityTypesService {
     const itemType = await this.findBySlug(projectId, slug);
 
     const data: Record<string, unknown> = {};
+    if (dto.description !== undefined)
+      data.description = dto.description.trim() || null;
     if (dto.icon !== undefined) data.icon = dto.icon;
     if (dto.color !== undefined) data.color = dto.color;
     if (dto.fieldSchema !== undefined)

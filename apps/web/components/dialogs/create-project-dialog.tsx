@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { Project } from "@loreum/types";
 import { Button } from "@loreum/ui/button";
 import {
@@ -50,8 +50,10 @@ export function CreateProjectDialog({
       setName("");
       setDescription("");
       onCreated(project);
-    } catch {
-      setError("Failed to create project");
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to create project",
+      );
     } finally {
       setSubmitting(false);
     }

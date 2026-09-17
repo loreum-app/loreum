@@ -14,6 +14,7 @@ interface ItemType {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
 }
 
 export default function CustomTypePage() {
@@ -74,7 +75,7 @@ export default function CustomTypePage() {
         <div>
           <h1>{itemType.name}</h1>
           <p className="text-sm text-muted-foreground">
-            {itemType.name} in your world
+            {itemType.description || `${itemType.name} in your world`}
           </p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>

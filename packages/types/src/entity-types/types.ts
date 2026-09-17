@@ -1,13 +1,13 @@
 export type FieldType =
-  | 'text'
-  | 'textarea'
-  | 'number'
-  | 'boolean'
-  | 'select'
-  | 'multi_select'
-  | 'date'
-  | 'url'
-  | 'entity_ref';
+  | "text"
+  | "textarea"
+  | "number"
+  | "boolean"
+  | "select"
+  | "multi_select"
+  | "date"
+  | "url"
+  | "entity_ref";
 
 export interface FieldDefinition {
   key: string;
@@ -19,13 +19,14 @@ export interface FieldDefinition {
   description?: string;
 }
 
-export type EntityType = 'CHARACTER' | 'LOCATION' | 'ORGANIZATION' | 'ITEM';
+export type EntityType = "CHARACTER" | "LOCATION" | "ORGANIZATION" | "ITEM";
 
 export interface ItemType {
   id: string;
   projectId: string;
   name: string;
   slug: string;
+  description: string | null;
   icon: string | null;
   color: string | null;
   fieldSchema: FieldDefinition[];
