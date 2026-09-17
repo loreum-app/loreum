@@ -55,6 +55,7 @@ describe("CreateProjectDialog", () => {
       name: "Second World",
       slug: "second-world",
       description: null,
+      visibility: "PRIVATE",
       ownerId: "u1",
       createdAt: "2026-09-16T00:00:00.000Z",
       updatedAt: "2026-09-16T00:00:00.000Z",
@@ -65,7 +66,11 @@ describe("CreateProjectDialog", () => {
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith(created));
     expect(mockedApi).toHaveBeenCalledWith("/projects", {
       method: "POST",
-      body: JSON.stringify({ name: "Second World", description: undefined }),
+      body: JSON.stringify({
+        name: "Second World",
+        description: undefined,
+        visibility: "PRIVATE",
+      }),
     });
   });
 });
