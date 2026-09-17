@@ -15,6 +15,11 @@ import {
 import { Input } from "@loreum/ui/input";
 import { Label } from "@loreum/ui/label";
 import { Textarea } from "@loreum/ui/textarea";
+import type { ProjectVisibility } from "@loreum/types";
+import {
+  VISIBILITY_OPTIONS,
+  VisibilitySelect,
+} from "@/components/visibility-select";
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -29,6 +34,7 @@ export function CreateProjectDialog({
 }: CreateProjectDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [visibility, setVisibility] = useState<ProjectVisibility>("PRIVATE");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,10 +51,12 @@ export function CreateProjectDialog({
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || undefined,
+          visibility,
         }),
       });
       setName("");
       setDescription("");
+      setVisibility("PRIVATE");
       onCreated(project);
     } catch (err) {
       setError(
@@ -90,6 +98,22 @@ export function CreateProjectDialog({
                 placeholder="A brief description of your world..."
                 rows={3}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="visibility">Visibility</Label>
+              <VisibilitySelect
+                id="visibility"
+                value={visibility}
+                onChange={setVisibility}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                {
+                  VISIBILITY_OPTIONS.find((o) => o.value === visibility)
+                    ?.description
+                }
+                . You can change this later in settings.
+              </p>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
           </div>

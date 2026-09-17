@@ -4,13 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@loreum/ui/select";
+import type { Project, ProjectVisibility } from "@loreum/types";
+import { VisibilitySelect } from "@/components/visibility-select";
 import {
   Users,
   MapPin,
@@ -68,32 +63,17 @@ const sections = [
   },
 ];
 
-const VISIBILITY_OPTIONS = [
-  {
-    value: "PRIVATE",
-    label: "Private",
-    description: "Only you can see this project",
-  },
-  { value: "PUBLIC", label: "Public", description: "Anyone can view the wiki" },
-  {
-    value: "UNLISTED",
-    label: "Unlisted",
-    description: "Accessible via direct link only",
-  },
-];
-
 export default function ProjectPage() {
   const params = useParams<{ slug: string }>();
-  const [visibility, setVisibility] = useState<string>("PRIVATE");
+  const [visibility, setVisibility] = useState<ProjectVisibility>("PRIVATE");
 
   useEffect(() => {
-    api<{ visibility: string }>(`/projects/${params.slug}`)
+    api<Project>(`/projects/${params.slug}`)
       .then((p) => setVisibility(p.visibility))
       .catch(() => {});
   }, [params.slug]);
 
-  const handleVisibilityChange = async (value: string | null) => {
-    if (!value) return;
+  const handleVisibilityChange = async (value: ProjectVisibility) => {
     setVisibility(value);
     try {
       await api(`/projects/${params.slug}`, {
@@ -102,7 +82,7 @@ export default function ProjectPage() {
       });
     } catch {
       // revert on error
-      api<{ visibility: string }>(`/projects/${params.slug}`)
+      api<Project>(`/projects/${params.slug}`)
         .then((p) => setVisibility(p.visibility))
         .catch(() => {});
     }
@@ -123,18 +103,11 @@ export default function ProjectPage() {
               <ExternalLink className="h-3 w-3" />
             </Link>
           )}
-          <Select value={visibility} onValueChange={handleVisibilityChange}>
-            <SelectTrigger className="w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {VISIBILITY_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <VisibilitySelect
+            value={visibility}
+            onChange={handleVisibilityChange}
+            className="w-36"
+          />
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

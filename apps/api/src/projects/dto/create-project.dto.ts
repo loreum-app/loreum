@@ -1,6 +1,14 @@
-import { IsString, IsOptional, MinLength, MaxLength } from "class-validator";
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  MinLength,
+  MaxLength,
+} from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import type { CreateProjectRequest } from "@loreum/types";
+import type { CreateProjectRequest, ProjectVisibility } from "@loreum/types";
+
+const VISIBILITY = ["PRIVATE", "PUBLIC", "UNLISTED"] as const;
 
 export class CreateProjectDto implements CreateProjectRequest {
   @ApiProperty({ example: "Echo Chronicles" })
@@ -14,4 +22,9 @@ export class CreateProjectDto implements CreateProjectRequest {
   @IsString()
   @MaxLength(2000)
   description?: string;
+
+  @ApiPropertyOptional({ enum: VISIBILITY, example: "PRIVATE" })
+  @IsOptional()
+  @IsEnum(VISIBILITY)
+  visibility?: ProjectVisibility;
 }

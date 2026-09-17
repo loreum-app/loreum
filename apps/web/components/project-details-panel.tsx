@@ -4,7 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import { useProject } from "@/lib/project-context";
-import type { Project } from "@loreum/types";
+import type { Project, ProjectVisibility } from "@loreum/types";
+import {
+  VISIBILITY_OPTIONS,
+  VisibilitySelect,
+} from "@/components/visibility-select";
+import Link from "next/link";
+import { Globe } from "lucide-react";
 import { Button } from "@loreum/ui/button";
 import {
   Dialog,
@@ -23,6 +29,9 @@ export function ProjectDetailsPanel() {
   const { project, setProject } = useProject();
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? "");
+  const [visibility, setVisibility] = useState<ProjectVisibility>(
+    project.visibility,
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +43,8 @@ export function ProjectDetailsPanel() {
 
   const dirty =
     name.trim() !== project.name ||
-    description.trim() !== (project.description ?? "");
+    description.trim() !== (project.description ?? "") ||
+    visibility !== project.visibility;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +59,7 @@ export function ProjectDetailsPanel() {
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim(),
+          visibility,
         }),
       });
       setProject(updated);
@@ -85,8 +96,8 @@ export function ProjectDetailsPanel() {
       <div>
         <h2 className="text-lg font-semibold">Project</h2>
         <p className="text-sm text-muted-foreground">
-          The name and description shown across your world. Renaming changes the
-          project URL.
+          The name, description, and visibility of your world. Renaming changes
+          the project URL.
         </p>
       </div>
 
@@ -115,6 +126,37 @@ export function ProjectDetailsPanel() {
             placeholder="What is this world about?"
             maxLength={2000}
           />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="project-visibility">Visibility</Label>
+          <VisibilitySelect
+            id="project-visibility"
+            value={visibility}
+            onChange={(next) => {
+              setVisibility(next);
+              setSaved(false);
+            }}
+            className="w-48"
+          />
+          <p className="text-xs text-muted-foreground">
+            {
+              VISIBILITY_OPTIONS.find((o) => o.value === visibility)
+                ?.description
+            }
+            .
+            {project.visibility !== "PRIVATE" && (
+              <>
+                {" "}
+                <Link
+                  href={`/worlds/${project.slug}`}
+                  className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
+                >
+                  <Globe className="h-3 w-3" />
+                  View public wiki
+                </Link>
+              </>
+            )}
+          </p>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex items-center gap-3">
