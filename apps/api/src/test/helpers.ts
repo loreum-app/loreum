@@ -12,6 +12,7 @@ import { CookieService } from "../auth/services/cookie.service";
 import { AppConfig } from "../config/app.config";
 import { corsOptionsDelegate } from "../common/cors";
 import { PrismaExceptionFilter } from "../common/filters/prisma-exception.filter";
+import { assertTestDatabase } from "./db-guard";
 
 /**
  * Boots a full NestJS app for integration tests.
@@ -22,6 +23,8 @@ export async function createTestApp(): Promise<{
   prisma: PrismaService;
   module: TestingModule;
 }> {
+  assertTestDatabase();
+
   const module = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
@@ -104,11 +107,13 @@ export async function createAuthenticatedUser(
 }
 
 /**
- * Cleans all data from the test database.
- * Runs between test suites to ensure isolation.
- * Tables are truncated in dependency order.
+ * Empties every table so each test starts from a known state.
+ *
+ * Refuses to run unless DATABASE_URL names a test database: pointed at a
+ * development database this would delete real work.
  */
 export async function cleanDatabase(prisma: PrismaService) {
+  assertTestDatabase();
   await prisma.$executeRawUnsafe(`
     DO $$ DECLARE r RECORD;
     BEGIN
