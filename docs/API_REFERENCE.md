@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for the Loreum REST API, WebSocket events, and MCP tools.
+Complete reference for the Loreum REST API and MCP tools, plus the planned real-time events.
 
 **Status key:** Built = implemented and functional | Planned = defined in spec, not yet built
 
@@ -692,18 +692,16 @@ Returns `{ plotlines: [...], works: [...] }`.
 
 ---
 
-## WebSocket Events
+## Real-time Events (Planned)
 
-**Endpoint:** `wss://localhost:3021/ws`
+Nothing below is implemented yet. The transport decision is made: one-way server-to-client events use **Server-Sent Events** (an `EventSource`-compatible `text/event-stream` endpoint under `/v1`, authenticated by the same session cookie), and **WebSockets are reserved for bidirectional collaboration** (Yjs document sync, presence). The endpoint path and event payloads will be defined with the first event.
 
-Authentication required via the same session cookie or bearer token.
-
-| Event                  | Direction        | Description                               | Status  |
-| ---------------------- | ---------------- | ----------------------------------------- | ------- |
-| `entity:updated`       | Server -> Client | An entity was modified                    | Planned |
-| `entity:deleted`       | Server -> Client | An entity was deleted                     | Planned |
-| `storyboard:updated`   | Server -> Client | A storyboard scene was modified           | Planned |
-| `relationship:updated` | Server -> Client | A relationship was added/modified/removed | Planned |
+| Event                  | Transport | Description                               | Status  |
+| ---------------------- | --------- | ----------------------------------------- | ------- |
+| `entity:updated`       | SSE       | An entity was modified                    | Planned |
+| `entity:deleted`       | SSE       | An entity was deleted                     | Planned |
+| `storyboard:updated`   | SSE       | A storyboard scene was modified           | Planned |
+| `relationship:updated` | SSE       | A relationship was added/modified/removed | Planned |
 
 ---
 
