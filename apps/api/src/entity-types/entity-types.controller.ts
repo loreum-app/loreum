@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -18,6 +19,7 @@ import { ProjectsService } from "../projects/projects.service";
 import { EntityTypesService } from "./entity-types.service";
 import { CreateEntityTypeDto } from "./dto/create-entity-type.dto";
 import { UpdateEntityTypeDto } from "./dto/update-entity-type.dto";
+import { DeleteEntityTypeQueryDto } from "./dto/delete-entity-type.dto";
 
 @ApiTags("Entity Types")
 @Controller("projects/:projectSlug/entity-types")
@@ -61,6 +63,19 @@ export class EntityTypesController {
     return this.entityTypesService.findBySlug(project.id, slug);
   }
 
+  @Get(":slug/deletion-impact")
+  @ApiOperation({
+    summary: "What a cascade delete of this type's entities would remove",
+  })
+  async deletionImpact(
+    @Param("projectSlug") projectSlug: string,
+    @User() user: AuthUser,
+    @Param("slug") slug: string,
+  ) {
+    const project = await this.projectsService.findBySlug(projectSlug, user.id);
+    return this.entityTypesService.deletionImpact(project.id, slug);
+  }
+
   @Patch(":slug")
   @ApiOperation({ summary: "Update an entity type" })
   async update(
@@ -75,13 +90,17 @@ export class EntityTypesController {
 
   @Delete(":slug")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: "Delete an entity type" })
+  @ApiOperation({
+    summary:
+      "Delete an entity type. If it still has entities, say what happens to them.",
+  })
   async remove(
     @Param("projectSlug") projectSlug: string,
     @User() user: AuthUser,
     @Param("slug") slug: string,
+    @Query() query: DeleteEntityTypeQueryDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.entityTypesService.delete(project.id, slug);
+    return this.entityTypesService.delete(project.id, slug, query);
   }
 }

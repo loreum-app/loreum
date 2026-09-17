@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateEntityTypeDto } from "./dto/create-entity-type.dto";
 import { UpdateEntityTypeDto } from "./dto/update-entity-type.dto";
@@ -72,12 +77,131 @@ export class EntityTypesService {
     });
   }
 
-  async delete(projectId: string, slug: string) {
+  /**
+   * How much disappears if this type's entities are deleted along with it.
+   * Deleting an ITEM entity cascades to everything that references it, so the
+   * caller can show real numbers before asking for confirmation.
+   */
+  async deletionImpact(projectId: string, slug: string) {
     const itemType = await this.findBySlug(projectId, slug);
+    const entityIds = (
+      await this.prisma.item.findMany({
+        where: { itemTypeId: itemType.id },
+        select: { entityId: true },
+      })
+    ).map((i) => i.entityId);
 
-    await this.prisma.itemType.delete({
-      where: { id: itemType.id },
-    });
+    if (!entityIds.length) {
+      return {
+        entities: 0,
+        relationships: 0,
+        timelineEventLinks: 0,
+        loreArticleLinks: 0,
+        sceneAppearances: 0,
+        tagLinks: 0,
+      };
+    }
+
+    const [
+      relationships,
+      timelineEventLinks,
+      loreArticleLinks,
+      sceneAppearances,
+      tagLinks,
+    ] = await Promise.all([
+      this.prisma.relationship.count({
+        where: {
+          OR: [
+            { sourceEntityId: { in: entityIds } },
+            { targetEntityId: { in: entityIds } },
+          ],
+        },
+      }),
+      this.prisma.timelineEventEntity.count({
+        where: { entityId: { in: entityIds } },
+      }),
+      this.prisma.loreArticleEntity.count({
+        where: { entityId: { in: entityIds } },
+      }),
+      this.prisma.sceneCharacter.count({
+        where: { entityId: { in: entityIds } },
+      }),
+      this.prisma.entityTag.count({ where: { entityId: { in: entityIds } } }),
+    ]);
+
+    return {
+      entities: entityIds.length,
+      relationships,
+      timelineEventLinks,
+      loreArticleLinks,
+      sceneAppearances,
+      tagLinks,
+    };
+  }
+
+  /**
+   * Deleting a type never silently orphans its entities: the UI lists items
+   * only by type, so an untyped item is unreachable. A type that still has
+   * entities requires an explicit disposition — move them to another type, or
+   * delete them along with it.
+   */
+  async delete(
+    projectId: string,
+    slug: string,
+    disposition?: { entities?: "move" | "delete"; to?: string },
+  ) {
+    const itemType = await this.findBySlug(projectId, slug);
+    const count = itemType._count.items;
+
+    if (count === 0) {
+      await this.prisma.itemType.delete({ where: { id: itemType.id } });
+      return;
+    }
+
+    const mode = disposition?.entities;
+    if (!mode) {
+      throw new ConflictException(
+        `"${itemType.name}" still has ${count} ${count === 1 ? "entity" : "entities"}. ` +
+          "Move them to another type or delete them along with it.",
+      );
+    }
+
+    if (mode === "move") {
+      if (!disposition.to) {
+        throw new BadRequestException(
+          "A destination type slug is required to move the entities.",
+        );
+      }
+      if (disposition.to === slug) {
+        throw new BadRequestException(
+          "The entities cannot be moved to the type being deleted.",
+        );
+      }
+      const destination = await this.findBySlug(projectId, disposition.to);
+
+      await this.prisma.$transaction([
+        this.prisma.item.updateMany({
+          where: { itemTypeId: itemType.id },
+          data: { itemTypeId: destination.id },
+        }),
+        this.prisma.itemType.delete({ where: { id: itemType.id } }),
+      ]);
+      return;
+    }
+
+    // Deleting the entities cascades to their relationships, timeline and lore
+    // links, tags, and scene appearances; the type goes with them.
+    const entityIds = (
+      await this.prisma.item.findMany({
+        where: { itemTypeId: itemType.id },
+        select: { entityId: true },
+      })
+    ).map((i) => i.entityId);
+
+    await this.prisma.$transaction([
+      this.prisma.entity.deleteMany({ where: { id: { in: entityIds } } }),
+      this.prisma.itemType.delete({ where: { id: itemType.id } }),
+    ]);
   }
 
   private async generateUniqueSlug(

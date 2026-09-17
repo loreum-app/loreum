@@ -347,6 +347,7 @@ export function ProjectSidebar({
         onOpenChange={setEditOpen}
         projectSlug={projectSlug}
         entityType={editingType}
+        otherTypes={itemTypes.filter((t) => t.id !== editingType?.id)}
         startWithDelete={pendingDelete}
         onUpdated={handleTypeUpdated}
         onDeleted={handleTypeDeleted}
