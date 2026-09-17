@@ -81,6 +81,37 @@ describe("Projects (integration)", () => {
         .expect(400);
     });
 
+    it("creates a project with the requested visibility", async () => {
+      const res = await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Open World", visibility: "PUBLIC" })
+        .expect(201);
+
+      expect(res.body.visibility).toBe("PUBLIC");
+    });
+
+    it("defaults a new project to PRIVATE when visibility is omitted", async () => {
+      const res = await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Quiet World" })
+        .expect(201);
+
+      expect(res.body.visibility).toBe("PRIVATE");
+    });
+
+    it("rejects a visibility outside PRIVATE, PUBLIC, UNLISTED", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Odd World", visibility: "SECRET" })
+        .expect(400);
+    });
+
     it("generates unique slugs for duplicate names", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")

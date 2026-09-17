@@ -73,6 +73,7 @@ export class ProjectsService {
         name: dto.name,
         slug,
         description: dto.description?.trim() || null,
+        visibility: dto.visibility,
         ownerId: userId,
       },
     });
