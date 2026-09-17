@@ -76,14 +76,8 @@ export class EntitlementsService {
     }
   }
 
-  /**
-   * Limits always reflect the subscribed plan, even when billing is disabled.
-   * The billing kill-switch ungates features (so nobody hits a paywall before
-   * the payment provider is wired up) but numeric limits like maxProjects
-   * still apply to prevent unbounded resource creation.
-   */
   async limits(userId: string): Promise<PlanLimits> {
-    return PLAN_LIMITS[await this.getSubscribedPlan(userId)];
+    return PLAN_LIMITS[await this.getEffectivePlan(userId)];
   }
 
   /** Summary for the account UI. */
@@ -97,7 +91,10 @@ export class EntitlementsService {
       plan,
       effectivePlan: effective,
       features: PLAN_FEATURES[effective],
-      limits: PLAN_LIMITS[plan],
+      limits: PLAN_LIMITS[effective],
+      // What the subscribed plan will allow once billing is switched on, so
+      // the UI can warn users while they are still ungated.
+      planLimits: PLAN_LIMITS[plan],
     };
   }
 }

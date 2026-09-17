@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from "vitest";
 import request from "supertest";
 import { INestApplication } from "@nestjs/common";
 import { TestingModule } from "@nestjs/testing";
@@ -74,8 +82,6 @@ describe("Projects (integration)", () => {
     });
 
     it("generates unique slugs for duplicate names", async () => {
-      await giveSubscription(prisma, userId, "PRO");
-
       await request(app.getHttpServer())
         .post("/v1/projects")
         .set("Cookie", authCookie)
@@ -93,7 +99,7 @@ describe("Projects (integration)", () => {
       expect(res.body.slug).toBe("duplicate-1");
     });
 
-    it("enforces the FREE plan project limit", async () => {
+    it("lets a FREE user create several projects while billing is disabled", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
         .set("Cookie", authCookie)
@@ -101,32 +107,59 @@ describe("Projects (integration)", () => {
         .send({ name: "First" })
         .expect(201);
 
-      const res = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post("/v1/projects")
         .set("Cookie", authCookie)
         .set("x-csrf-token", csrfToken)
         .send({ name: "Second" })
-        .expect(403);
-
-      expect(res.body.message).toMatch(/plan allows 1 project/i);
+        .expect(201);
     });
 
-    it("allows unlimited projects on PRO plan", async () => {
-      await giveSubscription(prisma, userId, "PRO");
+    describe("with billing enabled", () => {
+      beforeEach(() => {
+        process.env.BILLING_ENABLED = "true";
+      });
+      afterEach(() => {
+        delete process.env.BILLING_ENABLED;
+      });
 
-      await request(app.getHttpServer())
-        .post("/v1/projects")
-        .set("Cookie", authCookie)
-        .set("x-csrf-token", csrfToken)
-        .send({ name: "First" })
-        .expect(201);
+      it("refuses a FREE user's second project with the plan's limit", async () => {
+        await request(app.getHttpServer())
+          .post("/v1/projects")
+          .set("Cookie", authCookie)
+          .set("x-csrf-token", csrfToken)
+          .send({ name: "First" })
+          .expect(201);
 
-      await request(app.getHttpServer())
-        .post("/v1/projects")
-        .set("Cookie", authCookie)
-        .set("x-csrf-token", csrfToken)
-        .send({ name: "Second" })
-        .expect(201);
+        const res = await request(app.getHttpServer())
+          .post("/v1/projects")
+          .set("Cookie", authCookie)
+          .set("x-csrf-token", csrfToken)
+          .send({ name: "Second" })
+          .expect(403);
+
+        expect(res.body.message).toBe(
+          "Your plan allows 1 project. Upgrade to create more.",
+        );
+      });
+
+      it("lets a PRO subscriber create several projects", async () => {
+        await giveSubscription(prisma, userId, "PRO");
+
+        await request(app.getHttpServer())
+          .post("/v1/projects")
+          .set("Cookie", authCookie)
+          .set("x-csrf-token", csrfToken)
+          .send({ name: "First" })
+          .expect(201);
+
+        await request(app.getHttpServer())
+          .post("/v1/projects")
+          .set("Cookie", authCookie)
+          .set("x-csrf-token", csrfToken)
+          .send({ name: "Second" })
+          .expect(201);
+      });
     });
   });
 
@@ -136,8 +169,6 @@ describe("Projects (integration)", () => {
 
   describe("GET /v1/projects", () => {
     it("lists only the user's projects", async () => {
-      await giveSubscription(prisma, userId, "PRO");
-
       await request(app.getHttpServer())
         .post("/v1/projects")
         .set("Cookie", authCookie)
