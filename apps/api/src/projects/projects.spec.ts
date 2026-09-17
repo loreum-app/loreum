@@ -7,6 +7,7 @@ import {
   createTestApp,
   createAuthenticatedUser,
   cleanDatabase,
+  giveSubscription,
 } from "../test/helpers";
 
 describe("Projects (integration)", () => {
@@ -73,6 +74,8 @@ describe("Projects (integration)", () => {
     });
 
     it("generates unique slugs for duplicate names", async () => {
+      await giveSubscription(prisma, userId, "PRO");
+
       await request(app.getHttpServer())
         .post("/v1/projects")
         .set("Cookie", authCookie)
@@ -89,6 +92,42 @@ describe("Projects (integration)", () => {
 
       expect(res.body.slug).toBe("duplicate-1");
     });
+
+    it("enforces the FREE plan project limit", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "First" })
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Second" })
+        .expect(403);
+
+      expect(res.body.message).toMatch(/plan allows 1 project/i);
+    });
+
+    it("allows unlimited projects on PRO plan", async () => {
+      await giveSubscription(prisma, userId, "PRO");
+
+      await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "First" })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Second" })
+        .expect(201);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -97,6 +136,8 @@ describe("Projects (integration)", () => {
 
   describe("GET /v1/projects", () => {
     it("lists only the user's projects", async () => {
+      await giveSubscription(prisma, userId, "PRO");
+
       await request(app.getHttpServer())
         .post("/v1/projects")
         .set("Cookie", authCookie)
@@ -206,6 +247,23 @@ describe("Projects (integration)", () => {
 
       expect(res.body.slug).toBe("stable-slug");
       expect(res.body.description).toBe("Updated description");
+    });
+
+    it("clears the description to null when an empty string is sent", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Described", description: "Something" });
+
+      const res = await request(app.getHttpServer())
+        .patch("/v1/projects/described")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ description: "" })
+        .expect(200);
+
+      expect(res.body.description).toBeNull();
     });
   });
 
