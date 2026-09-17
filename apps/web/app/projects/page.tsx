@@ -9,7 +9,7 @@ import type { BillingSummary, Project } from "@loreum/types";
 import { Button } from "@loreum/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@loreum/ui/card";
 import { CreateProjectDialog } from "@/components/dialogs/create-project-dialog";
-import { Plus, FolderOpen, Info } from "lucide-react";
+import { Plus, FolderOpen, TriangleAlert } from "lucide-react";
 
 export default function ProjectsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -78,19 +78,24 @@ export default function ProjectsPage() {
 
       {pendingFreeLimit !== null && (
         <div
-          role="status"
-          className="mb-6 flex gap-3 rounded-lg border bg-muted/40 p-4 text-sm"
+          role="alert"
+          className="mb-6 flex gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm"
         >
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-          <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">Early access:</span>{" "}
-            you can currently create multiple private projects on the Free plan.
-            That is temporary. When paid plans launch, Free will include{" "}
-            {pendingFreeLimit === 1
-              ? "1 project"
-              : `${pendingFreeLimit} projects`}
-            , so keep that in mind while you build your worlds.
-          </p>
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+          <div className="space-y-2">
+            <p>
+              <span className="font-semibold text-destructive">Warning:</span>{" "}
+              early access. You can currently create multiple private projects
+              on the Free plan. That is temporary.
+            </p>
+            <p className="font-medium">
+              Free will only include{" "}
+              {pendingFreeLimit === 1
+                ? "1 project"
+                : `${pendingFreeLimit} projects`}
+              , so keep that in mind when building your worlds.
+            </p>
+          </div>
         </div>
       )}
 
