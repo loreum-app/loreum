@@ -8,42 +8,61 @@ import { Button } from "@loreum/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@loreum/ui/card";
 import { CreateEntityDialog } from "@/components/dialogs/create-entity-dialog";
 import { Plus, Box } from "lucide-react";
-import type { Entity } from "@loreum/types";
+import type { Entity, ItemType as SharedItemType } from "@loreum/types";
 
-interface ItemType {
-  id: string;
-  name: string;
-  slug: string;
-}
+type ItemType = Pick<SharedItemType, "id" | "name" | "slug" | "description">;
+
+/**
+ * Reserved slug for items that belong to no custom type. Without a page of
+ * their own such items appear in no list at all, since every other item list is
+ * scoped to a type.
+ */
+const UNTYPED_SLUG = "items";
+
+const UNTYPED_TYPE: ItemType = {
+  id: "",
+  name: "Untyped items",
+  slug: UNTYPED_SLUG,
+  description: "Items that do not belong to any custom type",
+};
 
 export default function CustomTypePage() {
   const params = useParams<{ slug: string; typeSlug: string }>();
   const router = useRouter();
+  const untyped = params.typeSlug === UNTYPED_SLUG;
   const [itemType, setItemType] = useState<ItemType | null>(null);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Fetch the item type to get its name, then fetch all ITEM entities and filter
+    const entitiesUrl = `/projects/${params.slug}/entities?type=ITEM&itemType=${
+      untyped ? "none" : encodeURIComponent(params.typeSlug)
+    }`;
+
     Promise.all([
-      api<ItemType[]>(`/projects/${params.slug}/entity-types`),
-      api<Entity[]>(`/projects/${params.slug}/entities?type=ITEM`),
+      untyped
+        ? Promise.resolve<ItemType[]>([])
+        : api<ItemType[]>(`/projects/${params.slug}/entity-types`),
+      api<Entity[]>(entitiesUrl),
     ])
       .then(([types, items]) => {
+        if (untyped) {
+          setItemType(UNTYPED_TYPE);
+          setEntities(items);
+          return;
+        }
         const match = types.find((t) => t.slug === params.typeSlug);
         if (!match) {
           router.replace(`/projects/${params.slug}`);
           return;
         }
         setItemType(match);
-        setEntities(
-          items.filter((e) => e.item?.itemType?.slug === params.typeSlug),
-        );
+        setEntities(items);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [params.slug, params.typeSlug, router]);
+  }, [params.slug, params.typeSlug, router, untyped]);
 
   const handleCreated = (entity: Entity) => {
     setEntities((prev) =>
@@ -74,28 +93,36 @@ export default function CustomTypePage() {
         <div>
           <h1>{itemType.name}</h1>
           <p className="text-sm text-muted-foreground">
-            {itemType.name} in your world
+            {itemType.description || `${itemType.name} in your world`}
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-1 h-4 w-4" />
-          New {itemType.name.toLowerCase().replace(/s$/, "")}
-        </Button>
+        {!untyped && (
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-1 h-4 w-4" />
+            New {itemType.name.toLowerCase().replace(/s$/, "")}
+          </Button>
+        )}
       </div>
 
       {entities.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
           <Box className="mb-4 h-10 w-10 text-muted-foreground" />
           <p className="mb-2 text-lg font-medium">
-            No {itemType.name.toLowerCase()} yet
+            {untyped
+              ? "Nothing untyped"
+              : `No ${itemType.name.toLowerCase()} yet`}
           </p>
           <p className="mb-6 text-sm text-muted-foreground">
-            Create your first one
+            {untyped
+              ? "Every item in this world belongs to a type."
+              : "Create your first one"}
           </p>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" />
-            New {itemType.name.toLowerCase().replace(/s$/, "")}
-          </Button>
+          {!untyped && (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" />
+              New {itemType.name.toLowerCase().replace(/s$/, "")}
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -122,6 +149,7 @@ export default function CustomTypePage() {
         onOpenChange={setDialogOpen}
         projectSlug={params.slug}
         defaultType="ITEM"
+        itemTypeId={itemType.id}
         onCreated={handleCreated}
       />
     </div>

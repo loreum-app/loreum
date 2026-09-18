@@ -122,21 +122,191 @@ describe("Entities (integration)", () => {
         .expect(400);
     });
 
-    it("generates unique slugs for duplicate names", async () => {
-      await request(app.getHttpServer())
+    it("gives the same name in two different types distinct slugs", async () => {
+      const character = await request(app.getHttpServer())
         .post(base())
         .set("Cookie", authCookie)
         .set("x-csrf-token", csrfToken)
-        .send({ type: "CHARACTER", name: "Aragorn" });
-
-      const res = await request(app.getHttpServer())
-        .post(base())
-        .set("Cookie", authCookie)
-        .set("x-csrf-token", csrfToken)
-        .send({ type: "CHARACTER", name: "Aragorn" })
+        .send({ type: "CHARACTER", name: "Rivendell" })
         .expect(201);
 
-      expect(res.body.slug).toBe("aragorn-1");
+      const location = await request(app.getHttpServer())
+        .post(base())
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ type: "LOCATION", name: "Rivendell" })
+        .expect(201);
+
+      expect(character.body.slug).toBe("rivendell");
+      expect(location.body.slug).toBe("rivendell-1");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // FILTERING BY CUSTOM ITEM TYPE
+  // -------------------------------------------------------------------------
+
+  describe("GET (list) ?itemType", () => {
+    const createType = async (name: string) => {
+      const res = await request(app.getHttpServer())
+        .post(`/v1/projects/${projectSlug}/entity-types`)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name })
+        .expect(201);
+      return res.body as { id: string; slug: string };
+    };
+
+    const createEntity = (body: Record<string, unknown>) =>
+      request(app.getHttpServer())
+        .post(base())
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send(body)
+        .expect(201);
+
+    const names = async (query: string) => {
+      const res = await request(app.getHttpServer())
+        .get(`${base()}${query}`)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .expect(200);
+      return (res.body as { name: string }[]).map((e) => e.name).sort();
+    };
+
+    beforeEach(async () => {
+      const weapons = await createType("Weapons");
+      await createEntity({
+        type: "ITEM",
+        name: "Sting",
+        item: { itemTypeId: weapons.id },
+      });
+      await createEntity({ type: "ITEM", name: "Loose Pebble" });
+      await createEntity({ type: "CHARACTER", name: "Bilbo" });
+    });
+
+    it("returns only the items of one custom type", async () => {
+      expect(await names("?type=ITEM&itemType=weapons")).toEqual(["Sting"]);
+    });
+
+    it("returns only items with no custom type when asked for none", async () => {
+      expect(await names("?type=ITEM&itemType=none")).toEqual(["Loose Pebble"]);
+    });
+
+    it("returns every item when no custom type is given", async () => {
+      expect(await names("?type=ITEM")).toEqual(["Loose Pebble", "Sting"]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // NAME UNIQUENESS (per project + type + custom item type)
+  // -------------------------------------------------------------------------
+
+  describe("name uniqueness", () => {
+    const createType = async (name: string) => {
+      const res = await request(app.getHttpServer())
+        .post(`/v1/projects/${projectSlug}/entity-types`)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name })
+        .expect(201);
+      return res.body.id as string;
+    };
+
+    const createEntity = (body: Record<string, unknown>) =>
+      request(app.getHttpServer())
+        .post(base())
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send(body);
+
+    it("refuses a second character with the same name", async () => {
+      await createEntity({ type: "CHARACTER", name: "Guard" }).expect(201);
+
+      const res = await createEntity({
+        type: "CHARACTER",
+        name: "Guard",
+      }).expect(409);
+
+      expect(res.body.message).toMatch(/already/i);
+    });
+
+    it("compares names case-insensitively and ignoring surrounding space", async () => {
+      await createEntity({ type: "CHARACTER", name: "Guard" }).expect(201);
+      await createEntity({ type: "CHARACTER", name: "  guard " }).expect(409);
+    });
+
+    it("allows the same name under a different built-in type", async () => {
+      await createEntity({ type: "CHARACTER", name: "Guard" }).expect(201);
+      await createEntity({ type: "LOCATION", name: "Guard" }).expect(201);
+    });
+
+    it("allows the same name under two different custom item types", async () => {
+      const weapons = await createType("Weapons");
+      const relics = await createType("Relics");
+
+      await createEntity({
+        type: "ITEM",
+        name: "Excalibur",
+        item: { itemTypeId: weapons },
+      }).expect(201);
+      await createEntity({
+        type: "ITEM",
+        name: "Excalibur",
+        item: { itemTypeId: relics },
+      }).expect(201);
+    });
+
+    it("refuses a duplicate name within the same custom item type", async () => {
+      const weapons = await createType("Weapons");
+
+      await createEntity({
+        type: "ITEM",
+        name: "Excalibur",
+        item: { itemTypeId: weapons },
+      }).expect(201);
+      await createEntity({
+        type: "ITEM",
+        name: "Excalibur",
+        item: { itemTypeId: weapons },
+      }).expect(409);
+    });
+
+    it("treats untyped items as their own group", async () => {
+      const weapons = await createType("Weapons");
+
+      await createEntity({ type: "ITEM", name: "Oddment" }).expect(201);
+      // A typed item may reuse the name...
+      await createEntity({
+        type: "ITEM",
+        name: "Oddment",
+        item: { itemTypeId: weapons },
+      }).expect(201);
+      // ...but a second untyped one may not.
+      await createEntity({ type: "ITEM", name: "Oddment" }).expect(409);
+    });
+
+    it("refuses a rename onto a name already used in the same type", async () => {
+      await createEntity({ type: "CHARACTER", name: "Frodo" }).expect(201);
+      await createEntity({ type: "CHARACTER", name: "Sam" }).expect(201);
+
+      await request(app.getHttpServer())
+        .patch(`${base()}/sam`)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Frodo" })
+        .expect(409);
+    });
+
+    it("allows saving an entity under its own existing name", async () => {
+      await createEntity({ type: "CHARACTER", name: "Frodo" }).expect(201);
+
+      await request(app.getHttpServer())
+        .patch(`${base()}/frodo`)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Frodo", summary: "Ring-bearer" })
+        .expect(200);
     });
   });
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { entityTypeLabel } from "@/lib/entity-label";
 import type { Relationship } from "@loreum/types";
 import { Button } from "@loreum/ui/button";
 import {
@@ -28,6 +29,8 @@ interface Entity {
   name: string;
   slug: string;
   type: string;
+  summary?: string | null;
+  item?: { itemType?: { name: string } | null } | null;
 }
 
 interface CreateRelationshipDialogProps {
@@ -121,7 +124,7 @@ export function CreateRelationshipDialog({
                 <SelectContent>
                   {entities.map((e) => (
                     <SelectItem key={e.slug} value={e.slug}>
-                      {e.name} ({e.type})
+                      {e.name} ({entityTypeLabel(e)})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -139,7 +142,7 @@ export function CreateRelationshipDialog({
                 <SelectContent>
                   {entities.map((e) => (
                     <SelectItem key={e.slug} value={e.slug}>
-                      {e.name} ({e.type})
+                      {e.name} ({entityTypeLabel(e)})
                     </SelectItem>
                   ))}
                 </SelectContent>

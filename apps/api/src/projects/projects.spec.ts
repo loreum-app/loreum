@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from "vitest";
 import request from "supertest";
 import { INestApplication } from "@nestjs/common";
 import { TestingModule } from "@nestjs/testing";
@@ -7,6 +15,7 @@ import {
   createTestApp,
   createAuthenticatedUser,
   cleanDatabase,
+  giveSubscription,
 } from "../test/helpers";
 
 describe("Projects (integration)", () => {
@@ -72,6 +81,37 @@ describe("Projects (integration)", () => {
         .expect(400);
     });
 
+    it("creates a project with the requested visibility", async () => {
+      const res = await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Open World", visibility: "PUBLIC" })
+        .expect(201);
+
+      expect(res.body.visibility).toBe("PUBLIC");
+    });
+
+    it("defaults a new project to PRIVATE when visibility is omitted", async () => {
+      const res = await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Quiet World" })
+        .expect(201);
+
+      expect(res.body.visibility).toBe("PRIVATE");
+    });
+
+    it("rejects a visibility outside PRIVATE, PUBLIC, UNLISTED", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Odd World", visibility: "SECRET" })
+        .expect(400);
+    });
+
     it("generates unique slugs for duplicate names", async () => {
       await request(app.getHttpServer())
         .post("/v1/projects")
@@ -88,6 +128,69 @@ describe("Projects (integration)", () => {
         .expect(201);
 
       expect(res.body.slug).toBe("duplicate-1");
+    });
+
+    it("lets a FREE user create several projects while billing is disabled", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "First" })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Second" })
+        .expect(201);
+    });
+
+    describe("with billing enabled", () => {
+      beforeEach(() => {
+        process.env.BILLING_ENABLED = "true";
+      });
+      afterEach(() => {
+        delete process.env.BILLING_ENABLED;
+      });
+
+      it("refuses a FREE user's second project with the plan's limit", async () => {
+        await request(app.getHttpServer())
+          .post("/v1/projects")
+          .set("Cookie", authCookie)
+          .set("x-csrf-token", csrfToken)
+          .send({ name: "First" })
+          .expect(201);
+
+        const res = await request(app.getHttpServer())
+          .post("/v1/projects")
+          .set("Cookie", authCookie)
+          .set("x-csrf-token", csrfToken)
+          .send({ name: "Second" })
+          .expect(403);
+
+        expect(res.body.message).toBe(
+          "Your plan allows 1 project. Upgrade to create more.",
+        );
+      });
+
+      it("lets a PRO subscriber create several projects", async () => {
+        await giveSubscription(prisma, userId, "PRO");
+
+        await request(app.getHttpServer())
+          .post("/v1/projects")
+          .set("Cookie", authCookie)
+          .set("x-csrf-token", csrfToken)
+          .send({ name: "First" })
+          .expect(201);
+
+        await request(app.getHttpServer())
+          .post("/v1/projects")
+          .set("Cookie", authCookie)
+          .set("x-csrf-token", csrfToken)
+          .send({ name: "Second" })
+          .expect(201);
+      });
     });
   });
 
@@ -206,6 +309,23 @@ describe("Projects (integration)", () => {
 
       expect(res.body.slug).toBe("stable-slug");
       expect(res.body.description).toBe("Updated description");
+    });
+
+    it("clears the description to null when an empty string is sent", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/projects")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name: "Described", description: "Something" });
+
+      const res = await request(app.getHttpServer())
+        .patch("/v1/projects/described")
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ description: "" })
+        .expect(200);
+
+      expect(res.body.description).toBeNull();
     });
   });
 

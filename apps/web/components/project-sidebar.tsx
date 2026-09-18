@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import {
@@ -11,6 +11,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
@@ -22,6 +23,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@loreum/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@loreum/ui/dropdown-menu";
+import {
+  EditEntityTypeDialog,
+  type EditableEntityType,
+} from "@/components/dialogs/edit-entity-type-dialog";
 import {
   Users,
   MapPin,
@@ -37,6 +49,10 @@ import {
   Check,
   X,
   Settings,
+  MoreHorizontal,
+  PackageOpen,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 interface ProjectSidebarProps {
@@ -44,13 +60,7 @@ interface ProjectSidebarProps {
   projectName: string;
 }
 
-interface ItemType {
-  id: string;
-  name: string;
-  slug: string;
-  icon: string | null;
-  color: string | null;
-}
+type ItemType = EditableEntityType;
 
 const builtInTypes = [
   { icon: Users, label: "Characters", href: "entities/characters" },
@@ -70,6 +80,7 @@ export function ProjectSidebar({
   projectName,
 }: ProjectSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const basePath = `/projects/${projectSlug}`;
   const { toggleSidebar, isMobile, setOpenMobile } = useSidebar();
 
@@ -77,12 +88,25 @@ export function ProjectSidebar({
   const [addingType, setAddingType] = useState(false);
   const [newTypeName, setNewTypeName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingType, setEditingType] = useState<ItemType | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(false);
+
+  const [untypedCount, setUntypedCount] = useState(0);
 
   useEffect(() => {
     api<ItemType[]>(`/projects/${projectSlug}/entity-types`)
       .then(setItemTypes)
       .catch(() => {});
   }, [projectSlug]);
+
+  // Items with no custom type belong to no type's page, so the sidebar offers
+  // a way in whenever any exist.
+  useEffect(() => {
+    api<unknown[]>(`/projects/${projectSlug}/entities?type=ITEM&itemType=none`)
+      .then((items) => setUntypedCount(items.length))
+      .catch(() => setUntypedCount(0));
+  }, [projectSlug, pathname]);
 
   const handleNavClick = () => {
     if (isMobile) setOpenMobile(false);
@@ -114,6 +138,31 @@ export function ProjectSidebar({
   const isActive = (href: string) => {
     const fullPath = `${basePath}/${href}`;
     return pathname === fullPath || pathname.startsWith(`${fullPath}/`);
+  };
+
+  const openEdit = (type: ItemType, confirmDelete = false) => {
+    setEditingType(type);
+    setPendingDelete(confirmDelete);
+    setEditOpen(true);
+  };
+
+  const handleTypeUpdated = (previousSlug: string, updated: ItemType) => {
+    setItemTypes((prev) =>
+      prev
+        .map((t) => (t.slug === previousSlug ? updated : t))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    const oldPath = `${basePath}/entities/${previousSlug}`;
+    if (updated.slug !== previousSlug && pathname.startsWith(oldPath)) {
+      router.replace(
+        pathname.replace(oldPath, `${basePath}/entities/${updated.slug}`),
+      );
+    }
+  };
+
+  const handleTypeDeleted = (slug: string) => {
+    setItemTypes((prev) => prev.filter((t) => t.slug !== slug));
+    if (isActive(`entities/${slug}`)) router.replace(basePath);
   };
 
   return (
@@ -171,7 +220,7 @@ export function ProjectSidebar({
                   </SidebarMenuItem>
                 ))}
                 {itemTypes.map((it) => (
-                  <SidebarMenuItem key={it.slug}>
+                  <SidebarMenuItem key={it.id}>
                     <SidebarMenuButton
                       isActive={isActive(`entities/${it.slug}`)}
                       render={
@@ -184,8 +233,53 @@ export function ProjectSidebar({
                       <Box className="h-4 w-4" />
                       {it.name}
                     </SidebarMenuButton>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <SidebarMenuAction
+                            showOnHover
+                            aria-label={`${it.name} options`}
+                          />
+                        }
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem onClick={() => openEdit(it)}>
+                          <Pencil className="h-4 w-4" />
+                          Rename or edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => openEdit(it, true)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </SidebarMenuItem>
                 ))}
+                {untypedCount > 0 && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={isActive("entities/items")}
+                      render={
+                        <Link
+                          href={`${basePath}/entities/items`}
+                          onClick={handleNavClick}
+                        />
+                      }
+                    >
+                      <PackageOpen className="h-4 w-4" />
+                      Untyped items
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {untypedCount}
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
                 <SidebarMenuItem>
                   {addingType ? (
                     <div className="flex items-center gap-1 px-2 py-1">
@@ -278,6 +372,16 @@ export function ProjectSidebar({
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <EditEntityTypeDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        projectSlug={projectSlug}
+        entityType={editingType}
+        otherTypes={itemTypes.filter((t) => t.id !== editingType?.id)}
+        startWithDelete={pendingDelete}
+        onUpdated={handleTypeUpdated}
+        onDeleted={handleTypeDeleted}
+      />
     </Sidebar>
   );
 }

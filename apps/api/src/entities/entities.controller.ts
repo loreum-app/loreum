@@ -48,9 +48,14 @@ export class EntitiesController {
     @User() user: AuthUser,
     @Query("type") type?: string,
     @Query("q") q?: string,
+    @Query("itemType") itemType?: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.entitiesService.findAllByProject(project.id, { type, q });
+    return this.entitiesService.findAllByProject(project.id, {
+      type,
+      q,
+      itemType,
+    });
   }
 
   @Get(":slug")

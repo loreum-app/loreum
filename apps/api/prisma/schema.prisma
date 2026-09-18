@@ -293,9 +293,10 @@ model ItemType {
   projectId   String
   name        String
   slug        String
+  description String? @db.Text
   icon        String?
   color       String?
-  fieldSchema Json   @default("[]")
+  fieldSchema Json    @default("[]")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

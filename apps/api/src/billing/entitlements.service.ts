@@ -92,6 +92,9 @@ export class EntitlementsService {
       effectivePlan: effective,
       features: PLAN_FEATURES[effective],
       limits: PLAN_LIMITS[effective],
+      // What the subscribed plan will allow once billing is switched on, so
+      // the UI can warn users while they are still ungated.
+      planLimits: PLAN_LIMITS[plan],
     };
   }
 }

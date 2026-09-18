@@ -72,7 +72,8 @@ export class ProjectsService {
       data: {
         name: dto.name,
         slug,
-        description: dto.description,
+        description: dto.description?.trim() || null,
+        visibility: dto.visibility,
         ownerId: userId,
       },
     });
@@ -166,7 +167,8 @@ export class ProjectsService {
     const project = await this.findBySlug(slug, userId);
 
     const data: Record<string, unknown> = {};
-    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.description !== undefined)
+      data.description = dto.description.trim() || null;
     if (dto.visibility !== undefined) data.visibility = dto.visibility;
 
     if (dto.name !== undefined) {

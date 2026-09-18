@@ -13,6 +13,10 @@ import { ProjectsService } from "../projects/projects.service";
 import { ApiKeysService } from "../api-keys/api-keys.service";
 
 const WRITE_TOOLS = [
+  "create_entity_type",
+  "update_entity_type",
+  "delete_entity_type",
+  "update_project",
   "create_entity",
   "update_entity",
   "delete_entity",
@@ -39,6 +43,7 @@ const READ_TOOLS = [
   "get_project",
   "search_project",
   "get_entity_types",
+  "get_entity_type_deletion_impact",
   "list_tags",
   "list_entities",
   "get_entity",
@@ -241,6 +246,73 @@ describe("MCP endpoint (integration)", () => {
         name: "Smaug",
       });
       expect(res.ok).toBe(false);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Custom entity types
+  // ---------------------------------------------------------------------------
+
+  describe("entity type tools", () => {
+    it("creates, renames, and deletes an empty custom type", async () => {
+      const created = await rw.call<{ id: string; slug: string; name: string }>(
+        "create_entity_type",
+        { name: "Wepons", description: "Sharp things." },
+      );
+      expect(created.ok, created.text).toBe(true);
+      expect(created.data.slug).toBe("wepons");
+
+      const renamed = await rw.call<{ slug: string; name: string }>(
+        "update_entity_type",
+        { slug: "wepons", name: "Weapons" },
+      );
+      expect(renamed.ok, renamed.text).toBe(true);
+      expect(renamed.data).toMatchObject({ slug: "weapons", name: "Weapons" });
+
+      const deleted = await rw.call("delete_entity_type", { slug: "weapons" });
+      expect(deleted.ok, deleted.text).toBe(true);
+    });
+
+    it("refuses to delete a type holding entities unless told what to do with them", async () => {
+      const type = await rw.call<{ id: string }>("create_entity_type", {
+        name: "Relics",
+      });
+      const relic = await rw.call<{ slug: string }>("create_entity", {
+        type: "ITEM",
+        name: "Palantir",
+        item: { itemTypeId: type.data.id },
+      });
+      expect(relic.ok, relic.text).toBe(true);
+
+      const refused = await rw.call<{ error: string }>("delete_entity_type", {
+        slug: "relics",
+      });
+      expect(refused.ok).toBe(false);
+      expect(refused.data.error).toMatch(/1 entity/i);
+
+      const impact = await rw.call<{ entities: number }>(
+        "get_entity_type_deletion_impact",
+        { slug: "relics" },
+      );
+      expect(impact.ok, impact.text).toBe(true);
+      expect(impact.data.entities).toBe(1);
+
+      const cascaded = await rw.call("delete_entity_type", {
+        slug: "relics",
+        entities: "delete",
+      });
+      expect(cascaded.ok, cascaded.text).toBe(true);
+
+      const gone = await rw.call("get_entity", { entitySlug: "palantir" });
+      expect(gone.ok).toBe(false);
+    });
+
+    it("hides entity type write tools from a read-only credential", async () => {
+      const tools = await ro.listTools();
+      expect(tools).toContain("get_entity_type_deletion_impact");
+      expect(tools).not.toContain("create_entity_type");
+      expect(tools).not.toContain("delete_entity_type");
+      expect(tools).not.toContain("update_project");
     });
   });
 

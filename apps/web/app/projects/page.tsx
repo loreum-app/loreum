@@ -5,16 +5,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
-import type { Project } from "@loreum/types";
+import type { BillingSummary, Project } from "@loreum/types";
 import { Button } from "@loreum/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@loreum/ui/card";
 import { CreateProjectDialog } from "@/components/dialogs/create-project-dialog";
-import { Plus, FolderOpen } from "lucide-react";
+import { Plus, FolderOpen, TriangleAlert } from "lucide-react";
 
 export default function ProjectsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [billing, setBilling] = useState<BillingSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -25,11 +26,27 @@ export default function ProjectsPage() {
       return;
     }
 
-    api<Project[]>("/projects")
-      .then(setProjects)
-      .catch(() => setProjects([]))
+    Promise.all([
+      api<Project[]>("/projects").catch(() => [] as Project[]),
+      // The notice is informational; if the summary fails, show nothing.
+      api<BillingSummary>("/billing/me").catch(() => null),
+    ])
+      .then(([projectList, summary]) => {
+        setProjects(projectList);
+        setBilling(summary);
+      })
       .finally(() => setLoading(false));
   }, [user, authLoading, router]);
+
+  // Number of projects the Free plan will allow once billing is enabled, or
+  // null when there is nothing to warn about.
+  const pendingFreeLimit =
+    billing !== null &&
+    !billing.billingEnabled &&
+    billing.plan === "FREE" &&
+    projects.length > 0
+      ? billing.planLimits.maxProjects
+      : null;
 
   const handleCreated = (project: Project) => {
     setProjects((prev) => [project, ...prev]);
@@ -58,6 +75,29 @@ export default function ProjectsPage() {
           New project
         </Button>
       </div>
+
+      {pendingFreeLimit !== null && (
+        <div
+          role="alert"
+          className="mb-6 flex gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm"
+        >
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+          <div className="space-y-2">
+            <p>
+              <span className="font-semibold text-destructive">Warning:</span>{" "}
+              early access. You can currently create multiple private projects
+              on the Free plan. That is temporary.
+            </p>
+            <p className="font-medium">
+              Free will only include{" "}
+              {pendingFreeLimit === 1
+                ? "1 project"
+                : `${pendingFreeLimit} projects`}
+              , so keep that in mind when building your worlds.
+            </p>
+          </div>
+        </div>
+      )}
 
       {projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">

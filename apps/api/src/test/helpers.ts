@@ -107,6 +107,19 @@ export async function createAuthenticatedUser(
 }
 
 /**
+ * Gives a test user a subscription so plan limits reflect that plan.
+ */
+export async function giveSubscription(
+  prisma: PrismaService,
+  userId: string,
+  plan: "FREE" | "PRO" | "TEAM" = "PRO",
+) {
+  return prisma.subscription.create({
+    data: { userId, plan, status: "ACTIVE" },
+  });
+}
+
+/**
  * Empties every table so each test starts from a known state.
  *
  * Refuses to run unless DATABASE_URL names a test database: pointed at a

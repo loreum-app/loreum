@@ -23,7 +23,10 @@ import { AppConfig } from "../config/app.config";
 import { McpAuthContext } from "../oauth/oauth.types";
 import { mcpContextFromAuthInfo } from "./mcp-auth.guard";
 import { ToolRegistrar } from "./tool-utils";
-import { registerProjectTools } from "./tools/project.tools";
+import {
+  registerProjectTools,
+  registerProjectWriteTools,
+} from "./tools/project.tools";
 import { registerEntityTools } from "./tools/entity.tools";
 import { registerRelationshipTools } from "./tools/relationship.tools";
 import { registerLoreTools } from "./tools/lore.tools";
@@ -133,6 +136,10 @@ export class McpService implements OnModuleInit, OnModuleDestroy {
       timeline: this.timelineService,
       storyboard: this.storyboardService,
       webUrl: this.config.webUrl,
+    });
+    registerProjectWriteTools(reg, ctx, {
+      projects: this.projectsService,
+      entityTypes: this.entityTypesService,
     });
     registerEntityTools(reg, ctx, this.entitiesService);
     registerRelationshipTools(reg, ctx, this.relationshipsService);
