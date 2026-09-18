@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-09-18
+
+### Items can be filed, moved, and untyped
+
+- The item page has a type selector while editing: file an item that belongs to no custom type, move it between types, or clear its type back to none. Saving follows the item to its new page. Until now the untyped-items page showed such items but gave no way to act on them, so they stayed there.
+- Changing an item's type can collide with a name in the destination exactly as a rename can. The uniqueness check now runs whenever the name **or** the type changes; previously a move into a type that already held that name succeeded, creating the duplicate the rule exists to prevent.
+- `PATCH /projects/:slug/entities/:slug` accepts `item.itemTypeId: null` to clear a type.
+
+Moving an entity between the built-in kinds (character, location, organization, item) is not supported: each keeps its own fields and references, so a conversion would discard data.
+
 ## [0.2.2] - 2026-09-18
 
 ### Custom entity types can be edited and deleted
