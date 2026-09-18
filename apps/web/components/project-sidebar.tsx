@@ -44,7 +44,6 @@ import {
   Clock,
   ScrollText,
   Map,
-  PanelLeftClose,
   ChevronRight,
   Plus,
   Check,
@@ -83,7 +82,7 @@ export function ProjectSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const basePath = `/projects/${projectSlug}`;
-  const { toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [addingType, setAddingType] = useState(false);
@@ -176,17 +175,9 @@ export function ProjectSidebar({
   // shortened to match the workspace shell.
   return (
     <Sidebar className="top-14 h-[calc(100svh-3.5rem)]">
+      {/* The collapse control lives in the workspace header, which stays put
+          while content scrolls; a second one here was just a spare bar. */}
       <SidebarHeader>
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={toggleSidebar}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <PanelLeftClose className="h-4 w-4" />
-          </Button>
-        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton

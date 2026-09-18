@@ -7,7 +7,7 @@ import type { Relationship } from "@loreum/types";
 import { Button } from "@loreum/ui/button";
 import { Card, CardHeader, CardDescription } from "@loreum/ui/card";
 import { CreateRelationshipDialog } from "@/components/dialogs/create-relationship-dialog";
-import { EditRelationshipSheet } from "@/components/edit-relationship-sheet";
+import { EditRelationshipDialog } from "@/components/edit-relationship-dialog";
 import { RelationshipGraph } from "@/components/relationship-graph";
 import {
   Plus,
@@ -172,7 +172,7 @@ export default function RelationshipsPage() {
         initialTargetSlug={connectTarget}
       />
 
-      <EditRelationshipSheet
+      <EditRelationshipDialog
         open={!!editingRel}
         onOpenChange={(open) => !open && setEditingRel(null)}
         projectSlug={params.slug}

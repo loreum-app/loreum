@@ -96,6 +96,8 @@ export default function OrganizationDetailPage() {
   const router = useRouter();
   const [entity, setEntity] = useState<EntityHub | null>(null);
   const [loading, setLoading] = useState(true);
+  // Bumped to refetch after a relationship is edited or deleted.
+  const [reloadKey, setReloadKey] = useState(0);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +125,7 @@ export default function OrganizationDetailPage() {
       })
       .catch(() => setEntity(null))
       .finally(() => setLoading(false));
-  }, [params.slug, params.entitySlug, router]);
+  }, [params.slug, params.entitySlug, router, reloadKey]);
 
   const startEditing = () => {
     if (!entity) return;
@@ -422,6 +424,7 @@ export default function OrganizationDetailPage() {
         <RelationshipsSection
           relationships={allRelationships}
           projectSlug={params.slug}
+          onChanged={() => setReloadKey((k) => k + 1)}
         />
         <TimelineSection
           events={entity.timelineEventEntities}
