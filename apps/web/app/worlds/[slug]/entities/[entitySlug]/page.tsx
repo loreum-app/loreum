@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { entityTypeLabel } from "@/lib/entity-label";
 import { Card, CardContent, CardHeader, CardTitle } from "@loreum/ui/card";
 import { Markdown } from "@/components/markdown";
 
@@ -24,6 +25,7 @@ interface WikiEntity {
     role: string | null;
   } | null;
   location?: { region: string | null; condition: string | null } | null;
+  item?: { itemType?: { name: string; slug: string } | null } | null;
   organization?: {
     ideology: string | null;
     territory: string | null;
@@ -107,7 +109,9 @@ export default function WikiEntityPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <p className="text-xs uppercase text-muted-foreground">{entity.type}</p>
+        <p className="text-xs uppercase text-muted-foreground">
+          {entityTypeLabel(entity)}
+        </p>
         <h2 className="text-2xl font-bold">{entity.name}</h2>
         {entity.entityTags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
