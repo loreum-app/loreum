@@ -46,7 +46,8 @@ graph TB
 
     subgraph Application
         API["NestJS API<br/>(port 3021)"]
-        WS["WebSocket Gateway<br/>(NestJS, same process)"]
+        SSE["SSE stream (planned)<br/>one-way notifications"]
+        WS["WebSocket Gateway (planned)<br/>bidirectional collab"]
         WORKERS["BullMQ Workers<br/>(same process)"]
         MCP["MCP Endpoint + OAuth AS<br/>(/v1/mcp/:project, same process)"]
     end
@@ -66,8 +67,8 @@ graph TB
     end
 
     WEB -- "REST API" --> API
-    WEB -- "Notifications (push)" --> WS
-    WEB -. "Yjs CRDT sync (planned)" .-> WS
+    WEB -. "Notifications (planned, SSE)" .-> SSE
+    WEB -. "Yjs CRDT sync (planned, WebSocket)" .-> WS
     MCP -- "Domain services (in-process)" --> API
 
     API --> PG
@@ -92,7 +93,8 @@ graph TB
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Next.js Frontend**  | SSR/CSR web app. Auth UI, project workspace, entity editor, relationship graph, timeline, storyboard.                                                                                                                                                                                                                                                                                             |
 | **NestJS API**        | REST API. Auth (Google OAuth + JWT), CRUD for all domain models, Swagger docs at `/docs`.                                                                                                                                                                                                                                                                                                         |
-| **WebSocket Gateway** | **Current:** one-way push notifications (entity/storyboard update events). **Planned:** bidirectional collaborative editing via Yjs CRDT provider. Runs inside the NestJS process.                                                                                                                                                                                                                |
+| **SSE stream**        | **Planned.** One-way server-to-client events (entity/storyboard update notifications) over Server-Sent Events, served by the NestJS process. Chosen for one-directional push: cookie auth works with `EventSource`, reconnection is built in, and it is plain HTTP through Cloudflare. Not yet implemented.                                                                                       |
+| **WebSocket Gateway** | **Planned.** Reserved for genuinely bidirectional traffic: collaborative editing via the Yjs CRDT provider and presence. Runs inside the NestJS process. Not yet implemented.                                                                                                                                                                                                                     |
 | **BullMQ Workers**    | Async job processing — search indexing, email dispatch, AI tasks. Centralized QueueModule; domain modules emit events, processors call domain services.                                                                                                                                                                                                                                           |
 | **MCP Endpoint**      | Model Context Protocol server for AI assistants. Stateless Streamable HTTP endpoint at `/v1/mcp/:projectSlug` inside the NestJS process (SDK v2). Tools call domain services directly with the project pinned by the credential. Authenticated by OAuth 2.1 access tokens (Loreum is its own authorization server: `/.well-known/oauth-authorization-server`, `/v1/oauth/*`) or project API keys. |
 | **PostgreSQL**        | Primary data store. Prisma ORM with migrations.                                                                                                                                                                                                                                                                                                                                                   |
@@ -114,7 +116,6 @@ sequenceDiagram
     participant Queue as Redis/BullMQ
     participant Worker as Worker
     participant OS as OpenSearch
-    participant WS as WebSocket
 
     Author->>Web: Fill entity form, submit
     Web->>API: POST /v1/projects/:slug/entities
@@ -127,12 +128,13 @@ sequenceDiagram
 
     Queue-->>Worker: Pick up index job
     Worker->>OS: Index entity document
-    API->>WS: Broadcast entity:updated
 ```
+
+Once the SSE stream exists, the API will also emit `entity:updated` to subscribed clients after the insert.
 
 ### 3b. Real-Time Collaboration (Planned — Yjs)
 
-Collaborative editing uses Yjs CRDTs over WebSocket. The Yjs document state lives in memory on the server while a session is active, and persists to PostgreSQL when the last client disconnects (or periodically). This is a separate concern from the notification events — both run over the same WebSocket connection but serve different purposes.
+Collaborative editing uses Yjs CRDTs over WebSocket, the one place a bidirectional connection is warranted. The Yjs document state lives in memory on the server while a session is active, and persists to PostgreSQL when the last client disconnects (or periodically). Notification events are a separate concern on a separate transport: they go one way, server to client, over the SSE stream.
 
 ```mermaid
 sequenceDiagram
@@ -174,7 +176,7 @@ sequenceDiagram
 - Each entity/lore article/scene is a separate Yjs document
 - Rich text fields use Yjs bindings for the editor (TipTap + `y-prosemirror` or similar)
 - Simple fields (name, tags) use `Y.Map` — last-write-wins is fine at field granularity
-- Notification events (`entity:updated`, etc.) still fire for clients not in the editing session (dashboards, entity lists)
+- Notification events (`entity:updated`, etc.) still fire over the SSE stream for clients not in the editing session (dashboards, entity lists)
 
 ### 3c. AI Query via MCP
 
@@ -234,7 +236,7 @@ graph TB
 
     subgraph "Application Server"
         NEXT["Next.js<br/>SSR + Static"]
-        NEST["NestJS API<br/>+ WebSocket<br/>+ Workers<br/>+ MCP endpoint"]
+        NEST["NestJS API<br/>+ Workers<br/>+ MCP endpoint"]
     end
 
     subgraph "Managed Services"
@@ -265,7 +267,7 @@ graph TB
 | --------------- | -------------------------------------------- | ---------------------------------------------------------------------------- |
 | **DNS + CDN**   | Cloudflare                                   | Tunnel for origin protection, R2 for file uploads                            |
 | **Frontend**    | Next.js 16                                   | Server-rendered, port 3020                                                   |
-| **API**         | NestJS                                       | REST + WebSocket + BullMQ workers, port 3021                                 |
+| **API**         | NestJS                                       | REST + BullMQ workers, port 3021; SSE and WebSocket planned                  |
 | **MCP**         | @modelcontextprotocol/server + node (SDK v2) | Streamable HTTP endpoint at `/v1/mcp/:project`, OAuth 2.1 AS, in API process |
 | **Database**    | PostgreSQL 18                                | Prisma ORM, single migration-managed schema                                  |
 | **Cache/Queue** | Redis 7                                      | BullMQ jobs, session store, rate limiting                                    |

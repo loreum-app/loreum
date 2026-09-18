@@ -6,7 +6,7 @@ How to deploy Loreum to production.
 
 | Service     | Provider      | Purpose                         |
 | ----------- | ------------- | ------------------------------- |
-| Application | TBD           | API + Web + WebSocket gateway   |
+| Application | TBD           | API + Web                       |
 | Database    | PostgreSQL 18 | Primary data store              |
 | Cache/Queue | Redis 7       | Session cache, BullMQ job queue |
 | Storage     | Cloudflare R2 | Images, file uploads            |

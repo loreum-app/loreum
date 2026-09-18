@@ -625,7 +625,8 @@ Loreum is hosted at `loreum.app`. The codebase is open source, but self-hosting 
 | Graph       | React Flow (@xyflow/react)    | Interactive node-edge visualization                          |
 | Rich Text   | Tiptap (ProseMirror)          | WYSIWYG, JSON doc storage, wiki-linking, collaboration-ready |
 | Collab Sync | Yjs (CRDT)                    | Real-time conflict-free editing via WebSocket                |
-| WebSocket   | NestJS Gateway                | Real-time events, Yjs document relay, presence               |
+| SSE         | NestJS `@Sse()` (planned)     | One-way real-time events: update notifications               |
+| WebSocket   | NestJS Gateway (planned)      | Bidirectional only: Yjs document relay, presence             |
 | i18n        | TBD (next-intl or similar)    | UI translation, locale-aware formatting                      |
 | Testing     | Jest + Supertest              | Unit, integration, e2e                                       |
 | Monorepo    | Turborepo + pnpm              | Shared types, parallel builds                                |
