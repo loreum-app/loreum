@@ -148,3 +148,21 @@
     @apply text-lg;
   }
 }
+
+/*
+ * Project workspace: the shell fills the viewport and scrolls inside its own
+ * pane, so the document must not scroll too. Set by SiteChrome on workspace
+ * routes; the app bar stays above the shell.
+ */
+body.workspace-shell {
+  overflow: hidden;
+}
+
+body.workspace-shell main {
+  min-height: 0;
+}
+
+/* The sidebar wrapper also assumes it owns the viewport. */
+body.workspace-shell .group\/sidebar-wrapper {
+  min-height: 0;
+}

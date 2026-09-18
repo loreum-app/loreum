@@ -57,8 +57,10 @@ export default function ProjectLayout({
             projectSlug={project.slug}
             projectName={project.name}
           />
-          <SidebarInset>
-            <header className="flex h-10 items-center gap-2 border-b px-4 md:h-12">
+          {/* Viewport minus the site app bar (h-14), so the shell fits exactly. */}
+          <SidebarInset className="h-[calc(100svh-3.5rem)] overflow-hidden">
+            {/* Sticky so the sidebar toggle stays reachable while content scrolls. */}
+            <header className="sticky top-0 z-20 flex h-10 shrink-0 items-center gap-2 border-b bg-background px-4 md:h-12">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mx-1 h-4" />
               <ProjectBreadcrumbs
@@ -66,7 +68,10 @@ export default function ProjectLayout({
                 projectSlug={project.slug}
               />
             </header>
-            <div className="pb-16 md:pb-0">{children}</div>
+            {/* The workspace owns its own scroll area rather than the page. */}
+            <div className="flex-1 overflow-y-auto pb-16 md:pb-0">
+              {children}
+            </div>
           </SidebarInset>
           <BottomNav projectSlug={project.slug} />
         </SidebarProvider>

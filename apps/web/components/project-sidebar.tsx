@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
@@ -93,6 +94,7 @@ export function ProjectSidebar({
   const [pendingDelete, setPendingDelete] = useState(false);
 
   const [untypedCount, setUntypedCount] = useState(0);
+  const [addTypeError, setAddTypeError] = useState<string | null>(null);
 
   useEffect(() => {
     api<ItemType[]>(`/projects/${projectSlug}/entity-types`)
@@ -115,6 +117,7 @@ export function ProjectSidebar({
   const handleAddType = async () => {
     if (!newTypeName.trim() || submitting) return;
     setSubmitting(true);
+    setAddTypeError(null);
     try {
       const created = await api<ItemType>(
         `/projects/${projectSlug}/entity-types`,
@@ -128,8 +131,11 @@ export function ProjectSidebar({
       );
       setNewTypeName("");
       setAddingType(false);
-    } catch {
-      // ignore
+    } catch (err) {
+      // Swallowing this left the input sitting there with no explanation.
+      setAddTypeError(
+        err instanceof ApiError ? err.message : "Could not create the type",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -165,9 +171,12 @@ export function ProjectSidebar({
     if (isActive(`entities/${slug}`)) router.replace(basePath);
   };
 
+  // The primitive pins the sidebar to the whole viewport (inset-y-0 h-svh).
+  // Here it sits below the site app bar (h-14), so it is nudged down and
+  // shortened to match the workspace shell.
   return (
-    <Sidebar>
-      <SidebarHeader className="pt-14">
+    <Sidebar className="top-14 h-[calc(100svh-3.5rem)]">
+      <SidebarHeader>
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
@@ -282,40 +291,56 @@ export function ProjectSidebar({
                 )}
                 <SidebarMenuItem>
                   {addingType ? (
-                    <div className="flex items-center gap-1 px-2 py-1">
-                      <Input
-                        value={newTypeName}
-                        onChange={(e) => setNewTypeName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleAddType();
-                          if (e.key === "Escape") {
+                    <div className="px-2 py-1">
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={newTypeName}
+                          onChange={(e) => {
+                            setNewTypeName(e.target.value);
+                            setAddTypeError(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleAddType();
+                            if (e.key === "Escape") {
+                              setAddingType(false);
+                              setNewTypeName("");
+                              setAddTypeError(null);
+                            }
+                          }}
+                          placeholder="Type name..."
+                          className="h-7 text-sm"
+                          autoFocus
+                          disabled={submitting}
+                          aria-invalid={addTypeError !== null}
+                        />
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onClick={handleAddType}
+                          disabled={!newTypeName.trim() || submitting}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onClick={() => {
                             setAddingType(false);
                             setNewTypeName("");
-                          }
-                        }}
-                        placeholder="Type name..."
-                        className="h-7 text-sm"
-                        autoFocus
-                        disabled={submitting}
-                      />
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        onClick={handleAddType}
-                        disabled={!newTypeName.trim() || submitting}
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setAddingType(false);
-                          setNewTypeName("");
-                        }}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
+                            setAddTypeError(null);
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      {addTypeError && (
+                        <p
+                          role="alert"
+                          className="mt-1 text-xs text-destructive"
+                        >
+                          {addTypeError}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <SidebarMenuButton onClick={() => setAddingType(true)}>
@@ -352,26 +377,23 @@ export function ProjectSidebar({
             })}
           </SidebarMenu>
         </SidebarGroup>
-
-        <SidebarGroup className="mt-auto">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={isActive("settings")}
-                render={
-                  <Link
-                    href={`${basePath}/settings`}
-                    onClick={handleNavClick}
-                  />
-                }
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
       </SidebarContent>
+      {/* Outside SidebarContent so it stays reachable when the nav overflows. */}
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={isActive("settings")}
+              render={
+                <Link href={`${basePath}/settings`} onClick={handleNavClick} />
+              }
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
       <EditEntityTypeDialog
         open={editOpen}
         onOpenChange={setEditOpen}
