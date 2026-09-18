@@ -125,6 +125,7 @@ function FloatingEdge({
 }: EdgeProps) {
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
+  const [hovered, setHovered] = useState(false);
 
   if (!sourceNode || !targetNode) return null;
 
@@ -137,17 +138,42 @@ function FloatingEdge({
   });
 
   return (
-    <BaseEdge
-      id={id}
-      path={path}
-      markerEnd={markerEnd}
-      style={style}
-      label={label}
-      labelStyle={labelStyle}
-      labelBgStyle={labelBgStyle}
-      labelBgPadding={labelBgPadding}
-      labelBgBorderRadius={labelBgBorderRadius}
-    />
+    <g
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ cursor: "pointer" }}
+    >
+      {/* A wide transparent path: the visible line is too thin to aim at. */}
+      <path
+        d={path}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={20}
+        pointerEvents="stroke"
+      />
+      <BaseEdge
+        id={id}
+        path={path}
+        markerEnd={markerEnd}
+        style={{
+          ...style,
+          stroke: hovered ? "var(--color-primary)" : style?.stroke,
+          strokeWidth: hovered ? 3 : style?.strokeWidth,
+          transition: "stroke 120ms, stroke-width 120ms",
+        }}
+        label={label}
+        labelStyle={
+          hovered
+            ? { ...labelStyle, fill: "rgba(255,255,255,0.95)" }
+            : labelStyle
+        }
+        labelBgStyle={
+          hovered ? { ...labelBgStyle, fill: "rgba(0,0,0,0.85)" } : labelBgStyle
+        }
+        labelBgPadding={labelBgPadding}
+        labelBgBorderRadius={labelBgBorderRadius}
+      />
+    </g>
   );
 }
 
@@ -363,10 +389,10 @@ export function RelationshipGraph({
         target: tgt.slug,
         type: "floating",
         label: rel.label,
-        style: { stroke: "rgba(255, 255, 255, 0.2)", strokeWidth: 1.5 },
-        labelStyle: { fill: "rgba(255, 255, 255, 0.6)", fontSize: 11 },
-        labelBgStyle: { fill: "rgba(0, 0, 0, 0.5)" },
-        labelBgPadding: [6, 3] as [number, number],
+        style: { stroke: "rgba(255, 255, 255, 0.45)", strokeWidth: 2 },
+        labelStyle: { fill: "rgba(255, 255, 255, 0.85)", fontSize: 12 },
+        labelBgStyle: { fill: "rgba(0, 0, 0, 0.7)" },
+        labelBgPadding: [8, 5] as [number, number],
         labelBgBorderRadius: 4,
         markerEnd: rel.bidirectional
           ? undefined

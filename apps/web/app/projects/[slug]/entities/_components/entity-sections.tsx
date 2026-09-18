@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { api } from "@/lib/api";
+import type { Relationship as FullRelationship } from "@loreum/types";
+import { EditRelationshipDialog } from "@/components/edit-relationship-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@loreum/ui/card";
 import { Textarea } from "@loreum/ui/textarea";
 import { Markdown } from "@/components/markdown";
@@ -122,12 +126,70 @@ export function EntityTags({ tags }: { tags: TagLink[] }) {
 
 // ── Relationships ──
 
+/**
+ * Owns the edit dialog so every entity page gets relationship editing without
+ * repeating the wiring. Tells the parent to refetch on change: the entity's
+ * relationships live in the parent's fetched state.
+ */
 export function RelationshipsSection({
   relationships,
   projectSlug,
+  onChanged,
 }: {
   relationships: Relationship[];
   projectSlug: string;
+  /** Called after an edit or delete so the page can refetch the entity. */
+  onChanged?: () => void;
+}) {
+  const [editing, setEditing] = useState<FullRelationship | null>(null);
+
+  // The entity payload carries a flattened relationship (just the other end),
+  // while the dialog needs the full record, so fetch it on demand.
+  const open = async (rel: Relationship) => {
+    try {
+      setEditing(
+        await api<FullRelationship>(
+          `/projects/${projectSlug}/relationships/${rel.id}`,
+        ),
+      );
+    } catch {
+      setEditing(null);
+    }
+  };
+
+  return (
+    <>
+      <RelationshipList
+        relationships={relationships}
+        projectSlug={projectSlug}
+        onEdit={open}
+      />
+      <EditRelationshipDialog
+        open={editing !== null}
+        onOpenChange={(isOpen) => !isOpen && setEditing(null)}
+        projectSlug={projectSlug}
+        relationship={editing}
+        onUpdated={() => {
+          setEditing(null);
+          onChanged?.();
+        }}
+        onDeleted={() => {
+          setEditing(null);
+          onChanged?.();
+        }}
+      />
+    </>
+  );
+}
+
+function RelationshipList({
+  relationships,
+  projectSlug,
+  onEdit,
+}: {
+  relationships: Relationship[];
+  projectSlug: string;
+  onEdit: (relationship: Relationship) => void;
 }) {
   if (!relationships.length) return null;
   return (
@@ -142,20 +204,33 @@ export function RelationshipsSection({
         <div className="space-y-2">
           {relationships.map((rel) => (
             <div key={rel.id} className="rounded-md border p-3 text-sm">
-              <Link
-                href={`/projects/${projectSlug}/${TYPE_ROUTE[rel.otherEntity.type] ?? "entities"}/${rel.otherEntity.slug}`}
-                className="flex items-center gap-2 hover:underline"
-              >
-                <span className="font-medium">{rel.otherEntity.name}</span>
+              {/*
+               * Two separate targets: the name goes to the other entity, the
+               * label opens this relationship. They used to share one link, so
+               * clicking the label navigated away instead of editing.
+               */}
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/projects/${projectSlug}/${TYPE_ROUTE[rel.otherEntity.type] ?? "entities"}/${rel.otherEntity.slug}`}
+                  className="font-medium hover:underline"
+                >
+                  {rel.otherEntity.name}
+                </Link>
                 {rel.bidirectional ? (
-                  <ArrowLeftRight className="h-3 w-3 text-muted-foreground" />
+                  <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground" />
                 ) : (
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                  <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground" />
                 )}
-                <span className="text-muted-foreground">{rel.label}</span>
-              </Link>
+                <button
+                  type="button"
+                  onClick={() => onEdit(rel)}
+                  className="text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  {rel.label}
+                </button>
+              </div>
               {rel.description && (
-                <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                   {rel.description}
                 </p>
               )}

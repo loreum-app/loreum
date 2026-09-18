@@ -3,7 +3,7 @@ import { Space_Grotesk, Onest } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/lib/auth-context";
 import { AppBar } from "@/components/app-bar";
-import { SiteFooter } from "@/components/site-footer";
+import { SiteChrome } from "@/components/site-chrome";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -38,7 +38,7 @@ export default function RootLayout({
         <AuthProvider>
           <AppBar />
           <main className="min-h-screen">{children}</main>
-          <SiteFooter />
+          <SiteChrome />
         </AuthProvider>
       </body>
     </html>
