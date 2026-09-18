@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { Entity, CreateEntityRequest } from "@loreum/types";
 import { Button } from "@loreum/ui/button";
 import {
@@ -62,6 +62,8 @@ interface CreateEntityDialogProps {
   onOpenChange: (open: boolean) => void;
   projectSlug: string;
   defaultType?: EntityType;
+  /** Custom item type the new entity belongs to, when created from its page. */
+  itemTypeId?: string;
   onCreated: (entity: Entity) => void;
 }
 
@@ -70,6 +72,7 @@ export function CreateEntityDialog({
   onOpenChange,
   projectSlug,
   defaultType,
+  itemTypeId,
   onCreated,
 }: CreateEntityDialogProps) {
   const [name, setName] = useState("");
@@ -139,6 +142,10 @@ export function CreateEntityDialog({
         territory: orgTerritory.trim() || undefined,
         ideology: orgIdeology.trim() || undefined,
       };
+    } else if (type === "ITEM" && itemTypeId) {
+      // Without this the item is created with no custom type, and the type's
+      // page — which lists by type — can never show it.
+      body.item = { itemTypeId };
     }
 
     try {
@@ -148,8 +155,10 @@ export function CreateEntityDialog({
       });
       resetFields();
       onCreated(entity);
-    } catch {
-      setError("Failed to create entity");
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to create entity",
+      );
     } finally {
       setSubmitting(false);
     }

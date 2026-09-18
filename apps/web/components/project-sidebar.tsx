@@ -50,6 +50,7 @@ import {
   X,
   Settings,
   MoreHorizontal,
+  PackageOpen,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -91,11 +92,21 @@ export function ProjectSidebar({
   const [editOpen, setEditOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
 
+  const [untypedCount, setUntypedCount] = useState(0);
+
   useEffect(() => {
     api<ItemType[]>(`/projects/${projectSlug}/entity-types`)
       .then(setItemTypes)
       .catch(() => {});
   }, [projectSlug]);
+
+  // Items with no custom type belong to no type's page, so the sidebar offers
+  // a way in whenever any exist.
+  useEffect(() => {
+    api<unknown[]>(`/projects/${projectSlug}/entities?type=ITEM&itemType=none`)
+      .then((items) => setUntypedCount(items.length))
+      .catch(() => setUntypedCount(0));
+  }, [projectSlug, pathname]);
 
   const handleNavClick = () => {
     if (isMobile) setOpenMobile(false);
@@ -250,6 +261,25 @@ export function ProjectSidebar({
                     </DropdownMenu>
                   </SidebarMenuItem>
                 ))}
+                {untypedCount > 0 && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={isActive("entities/items")}
+                      render={
+                        <Link
+                          href={`${basePath}/entities/items`}
+                          onClick={handleNavClick}
+                        />
+                      }
+                    >
+                      <PackageOpen className="h-4 w-4" />
+                      Untyped items
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {untypedCount}
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
                 <SidebarMenuItem>
                   {addingType ? (
                     <div className="flex items-center gap-1 px-2 py-1">

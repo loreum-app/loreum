@@ -1,5 +1,9 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "../../generated/prisma/client";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { EntityType, Prisma } from "../../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateEntityDto } from "./dto/create-entity.dto";
 import { UpdateEntityDto } from "./dto/update-entity.dto";
@@ -90,8 +94,46 @@ export class EntitiesService {
     );
   }
 
+  /**
+   * Names must be unique within a type, so a list of one type never shows two
+   * entries a person cannot tell apart. Scope is the built-in type, and for
+   * items the custom type as well: a "Guard" character and a "Guard" location
+   * are fine, as are an "Excalibur" in Weapons and one in Relics. Items with no
+   * custom type form their own group.
+   */
+  private async assertNameAvailable(
+    projectId: string,
+    type: EntityType,
+    name: string,
+    itemTypeId: string | null,
+    excludeEntityId?: string,
+  ) {
+    const clash = await this.prisma.entity.findFirst({
+      where: {
+        projectId,
+        type,
+        name: { equals: name.trim(), mode: "insensitive" },
+        ...(excludeEntityId && { id: { not: excludeEntityId } }),
+        ...(type === "ITEM" && { item: { is: { itemTypeId } } }),
+      },
+      select: { id: true },
+    });
+
+    if (clash) {
+      throw new ConflictException(
+        `Another entity of this type is already called "${name.trim()}". Give this one a different name.`,
+      );
+    }
+  }
+
   async create(projectId: string, dto: CreateEntityDto) {
     await this.assertReferences(projectId, dto);
+    await this.assertNameAvailable(
+      projectId,
+      dto.type,
+      dto.name,
+      dto.item?.itemTypeId ?? null,
+    );
     const slug = await generateUniqueSlug(
       this.prisma,
       "entity",
@@ -188,12 +230,20 @@ export class EntitiesService {
 
   async findAllByProject(
     projectId: string,
-    filters?: { type?: string; q?: string },
+    filters?: { type?: string; q?: string; itemType?: string },
   ) {
     const where: Record<string, unknown> = { projectId };
 
     if (filters?.type) {
       where.type = filters.type;
+    }
+
+    // "none" lists items that belong to no custom type; without it they would
+    // appear on no type's page at all.
+    if (filters?.itemType === "none") {
+      where.item = { is: { itemTypeId: null } };
+    } else if (filters?.itemType) {
+      where.item = { is: { itemType: { is: { slug: filters.itemType } } } };
     }
 
     if (filters?.q) {
@@ -246,6 +296,15 @@ export class EntitiesService {
     if (dto.imageUrl !== undefined) data.imageUrl = dto.imageUrl;
 
     if (dto.name !== undefined) {
+      await this.assertNameAvailable(
+        projectId,
+        entity.type,
+        dto.name,
+        dto.item?.itemTypeId !== undefined
+          ? dto.item.itemTypeId
+          : (entity.item?.itemTypeId ?? null),
+        entity.id,
+      );
       data.name = dto.name;
       data.slug = await generateUniqueSlug(
         this.prisma,
