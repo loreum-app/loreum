@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { Button } from "@loreum/ui/button";
 import { Input } from "@loreum/ui/input";
 import { Label } from "@loreum/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@loreum/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@loreum/ui/card";
 import {
   EntityTags,
@@ -16,6 +23,10 @@ import {
   mergeRelationships,
 } from "../../_components/entity-sections";
 import { Pencil, Save, X, Trash2 } from "lucide-react";
+
+/** Select needs a non-empty value, so "untyped" stands in for a null type. */
+const UNTYPED_VALUE = "__untyped__";
+const UNTYPED_TYPE_SLUG = "items";
 
 interface FieldSchema {
   key: string;
@@ -104,6 +115,18 @@ export default function ItemDetailPage() {
   const [editSecrets, setEditSecrets] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [itemTypes, setItemTypes] = useState<
+    { id: string; name: string; slug: string }[]
+  >([]);
+  const [editItemTypeId, setEditItemTypeId] = useState<string>(UNTYPED_VALUE);
+
+  useEffect(() => {
+    api<{ id: string; name: string; slug: string }[]>(
+      `/projects/${params.slug}/entity-types`,
+    )
+      .then(setItemTypes)
+      .catch(() => setItemTypes([]));
+  }, [params.slug]);
 
   useEffect(() => {
     api<EntityHub>(`/projects/${params.slug}/entities/${params.entitySlug}`)
@@ -137,6 +160,7 @@ export default function ItemDetailPage() {
         Object.entries(parsed).map(([k, v]) => [k, String(v ?? "")]),
       ),
     );
+    setEditItemTypeId(entity.item?.itemTypeId ?? UNTYPED_VALUE);
     setEditing(true);
   };
 
@@ -159,18 +183,27 @@ export default function ItemDetailPage() {
             backstory: editBackstory.trim() || null,
             secrets: editSecrets.trim() || null,
             notes: editNotes.trim() || null,
-            item: { fields: fieldsPayload },
+            item: {
+              fields: fieldsPayload,
+              itemTypeId:
+                editItemTypeId === UNTYPED_VALUE ? null : editItemTypeId,
+            },
           }),
         },
       );
       setEntity(updated);
       setEditing(false);
-      if (updated.slug !== params.entitySlug)
+      // Moving the item to another type moves its page too.
+      const nextTypeSlug = updated.item?.itemType?.slug ?? UNTYPED_TYPE_SLUG;
+      if (
+        updated.slug !== params.entitySlug ||
+        nextTypeSlug !== params.typeSlug
+      )
         router.replace(
-          `/projects/${params.slug}/entities/${params.typeSlug}/${updated.slug}`,
+          `/projects/${params.slug}/entities/${nextTypeSlug}/${updated.slug}`,
         );
-    } catch {
-      setError("Failed to save");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -265,6 +298,32 @@ export default function ItemDetailPage() {
           />
         ) : (
           <h1>{entity.name}</h1>
+        )}
+        {editing && (
+          <div className="mt-3 max-w-xs space-y-1.5">
+            <Label htmlFor="item-type">Type</Label>
+            <Select
+              value={editItemTypeId}
+              onValueChange={(v) => v && setEditItemTypeId(v)}
+            >
+              <SelectTrigger id="item-type" className="w-full">
+                <SelectValue>
+                  {editItemTypeId === UNTYPED_VALUE
+                    ? "No type"
+                    : (itemTypes.find((t) => t.id === editItemTypeId)?.name ??
+                      "No type")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNTYPED_VALUE}>No type</SelectItem>
+                {itemTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
         <EntityTags tags={entity.entityTags} />
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}

@@ -199,6 +199,97 @@ describe("Entities (integration)", () => {
   });
 
   // -------------------------------------------------------------------------
+  // CHANGING AN ITEM'S CUSTOM TYPE
+  // -------------------------------------------------------------------------
+
+  describe("PATCH item type", () => {
+    const createType = async (name: string) => {
+      const res = await request(app.getHttpServer())
+        .post(`/v1/projects/${projectSlug}/entity-types`)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ name })
+        .expect(201);
+      return res.body as { id: string; slug: string };
+    };
+
+    const patch = (slug: string, body: Record<string, unknown>) =>
+      request(app.getHttpServer())
+        .patch(`${base()}/${slug}`)
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send(body);
+
+    it("files an untyped item under a type", async () => {
+      const weapons = await createType("Weapons");
+      await request(app.getHttpServer())
+        .post(base())
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ type: "ITEM", name: "Sting" })
+        .expect(201);
+
+      const res = await patch("sting", {
+        item: { itemTypeId: weapons.id },
+      }).expect(200);
+
+      expect(res.body.item.itemTypeId).toBe(weapons.id);
+    });
+
+    it("moves an item from one type to another", async () => {
+      const weapons = await createType("Weapons");
+      const relics = await createType("Relics");
+      await request(app.getHttpServer())
+        .post(base())
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ type: "ITEM", name: "Sting", item: { itemTypeId: weapons.id } })
+        .expect(201);
+
+      const res = await patch("sting", {
+        item: { itemTypeId: relics.id },
+      }).expect(200);
+
+      expect(res.body.item.itemTypeId).toBe(relics.id);
+    });
+
+    it("clears an item's type back to untyped", async () => {
+      const weapons = await createType("Weapons");
+      await request(app.getHttpServer())
+        .post(base())
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ type: "ITEM", name: "Sting", item: { itemTypeId: weapons.id } })
+        .expect(201);
+
+      const res = await patch("sting", { item: { itemTypeId: null } }).expect(
+        200,
+      );
+
+      expect(res.body.item.itemTypeId).toBeNull();
+    });
+
+    it("refuses a move that would collide with a name in the destination", async () => {
+      const weapons = await createType("Weapons");
+      await request(app.getHttpServer())
+        .post(base())
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ type: "ITEM", name: "Sting", item: { itemTypeId: weapons.id } })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post(base())
+        .set("Cookie", authCookie)
+        .set("x-csrf-token", csrfToken)
+        .send({ type: "ITEM", name: "Sting" })
+        .expect(201);
+
+      // The untyped "Sting" cannot join Weapons, which already has one.
+      await patch("sting-1", { item: { itemTypeId: weapons.id } }).expect(409);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // NAME UNIQUENESS (per project + type + custom item type)
   // -------------------------------------------------------------------------
 
