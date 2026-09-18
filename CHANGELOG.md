@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-18
+
 ### ChatGPT
 
 - `search` and `fetch` tools implementing ChatGPT's connector contract (`structuredContent` mirrored as text; citation URLs to the wiki for public/unlisted worlds, to the app for private ones). ChatGPT's regular connectors and deep research work; developer mode exposes every tool.
@@ -10,6 +12,21 @@
 
 - **Client ID Metadata Documents** (the registration method MCP recommends and claude.ai prefers): `https` client ids are resolved to their metadata document with an SSRF-hardened fetch (public addresses only, socket pinned to the validated address, no redirects, 5 s / 64 KiB limits), cached for an hour. Advertised via `client_id_metadata_document_supported`. Dynamic registration remains available.
 - Bearer scheme accepted case-insensitively; every OAuth and MCP request outcome is logged.
+
+### Tests no longer destroy development data
+
+- The API integration suite truncates every table between tests and, locally, inherited `DATABASE_URL` from `apps/api/.env` — the development database. Running the suite emptied the worlds and sessions being worked on. Global setup now creates `<name>_test`, applies the committed migrations to it with `prisma migrate deploy`, points the suite there, and drops it when the run ends.
+- A guard in `cleanDatabase` and `createTestApp` refuses to touch any database whose name does not end in `_test`, so a misconfigured environment fails loudly instead of deleting data.
+
+### Web test harness
+
+- Vitest with jsdom and Testing Library in `apps/web`, a `test` script, and a CI step in the unit-tests job. Covers the `api()` client: success, 204, the server's own error message, status on `ApiError`, joined validation lists, non-JSON bodies.
+
+### Documentation
+
+- Real-time features are marked planned rather than shipped: there is no WebSocket gateway, no SSE handler, and no notifications module. Records the transport decision — **SSE** for one-directional server-to-client events, **WebSockets** reserved for bidirectional collaboration (Yjs sync, presence).
+- Cloudflare's "Block AI training bots" setting returns 403 to hosted MCP clients at the edge; the deployment guide and MCP docs now give the WAF skip rule.
+- `CONTRIBUTING.md` matched an older layout (Node 20 / pnpm 9, an `apps/mcp` package that does not exist, primitives under `components/ui`). It now reflects the engines in `package.json`, the real structure, the four CI jobs and the commands they run, and asks for red-green tests.
 
 ## [0.2.0] - 2026-09-05
 
