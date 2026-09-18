@@ -295,16 +295,27 @@ export class EntitiesService {
     if (dto.notes !== undefined) data.notes = dto.notes;
     if (dto.imageUrl !== undefined) data.imageUrl = dto.imageUrl;
 
-    if (dto.name !== undefined) {
+    // Moving an item to another type can collide there just as a rename can,
+    // so the check runs whenever either side of (name, type) changes.
+    const nextItemTypeId =
+      dto.item?.itemTypeId !== undefined
+        ? dto.item.itemTypeId
+        : (entity.item?.itemTypeId ?? null);
+    const typeChanged =
+      entity.type === "ITEM" &&
+      nextItemTypeId !== (entity.item?.itemTypeId ?? null);
+
+    if (dto.name !== undefined || typeChanged) {
       await this.assertNameAvailable(
         projectId,
         entity.type,
-        dto.name,
-        dto.item?.itemTypeId !== undefined
-          ? dto.item.itemTypeId
-          : (entity.item?.itemTypeId ?? null),
+        dto.name ?? entity.name,
+        nextItemTypeId,
         entity.id,
       );
+    }
+
+    if (dto.name !== undefined) {
       data.name = dto.name;
       data.slug = await generateUniqueSlug(
         this.prisma,

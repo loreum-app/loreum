@@ -1,4 +1,4 @@
-import type { EntityType } from '../entity-types';
+import type { EntityType } from "../entity-types";
 
 export interface CharacterFields {
   status?: string;
@@ -22,6 +22,12 @@ export interface OrganizationFields {
 
 export interface ItemFields {
   itemTypeId?: string;
+  fields?: Record<string, unknown>;
+}
+
+export interface ItemFieldsUpdate {
+  /** null clears the custom type, leaving the item untyped. */
+  itemTypeId?: string | null;
   fields?: Record<string, unknown>;
 }
 
@@ -53,14 +59,14 @@ export interface UpdateEntityRequest {
   character?: CharacterFields;
   location?: LocationFields;
   organization?: OrganizationFields;
-  item?: ItemFields;
+  item?: ItemFieldsUpdate;
 }
 
 export interface EntityFilterParams {
   type?: EntityType;
   q?: string;
   tag?: string;
-  include?: ('relationships' | 'tags')[];
+  include?: ("relationships" | "tags")[];
   page?: number;
   limit?: number;
 }

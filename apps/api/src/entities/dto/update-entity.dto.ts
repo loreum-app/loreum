@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsArray,
   IsObject,
+  ValidateIf,
   ValidateNested,
   MinLength,
   MaxLength,
@@ -32,7 +33,11 @@ class OrganizationFieldsDto {
 }
 
 class ItemFieldsDto {
-  @IsOptional() @IsString() itemTypeId?: string;
+  /** null clears the custom type, leaving the item untyped. */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  itemTypeId?: string | null;
   @IsOptional() @IsObject() fields?: Record<string, unknown>;
 }
 
