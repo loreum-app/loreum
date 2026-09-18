@@ -35,6 +35,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter api db:generate
       - run: pnpm --filter api test:unit
+      - run: pnpm --filter web test
 
   integration-tests:
     name: Integration Tests
