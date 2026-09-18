@@ -2,6 +2,40 @@
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-18
+
+### Custom entity types can be edited and deleted
+
+- Rename a type, give it a description, or change its icon and colour from a menu beside it in the sidebar. The description replaces the generated "{name} in your world" subtitle on the type's page.
+- Deleting a type now says what happens to its entities. It used to detach them silently, and because every item list is scoped to a type, those entities then appeared nowhere in the app: they could not be opened, renamed, re-typed, or deleted, though MCP clients could still read and change them. A type that still holds entities must be deleted with a disposition — move them to another type, or delete them along with it — and the API answers `409` otherwise, so no caller can strand them.
+- Deleting an item cascades to its relationships, timeline links, lore mentions, scene appearances, and tags, so the confirmation reports those counts before anything is destroyed and asks for the type's name to be typed.
+
+### Projects can be renamed, described, and deleted
+
+- A Project panel in settings for the name, description, and visibility, plus a delete confirmed by typing the project name. Renaming updates the URL, breadcrumb, and sidebar in place.
+- Visibility is chosen when a project is created, not only afterwards from the overview page where people could not find it. Private is still the default.
+
+### Fixes
+
+- **Entities created on a custom type's page were not filed under it.** The create dialog never sent the type, so every item was stored untyped and vanished from the page that had just created it. Items with no type now also have a page of their own, reachable from the sidebar whenever any exist, so nothing is stranded.
+- **Entity names are unique within a type.** Two characters called "Guard" are refused; a "Guard" character and a "Guard" location are fine, as are an "Excalibur" in Weapons and one in Relics. Comparison ignores case and surrounding space.
+- Entity pickers name the real type — "Sting (Weapons)", "John (Character)" — instead of the built-in `ITEM`. Public wiki pages do the same.
+- Failed project and entity creation shows the server's own message instead of a generic one.
+- Clearing a description stores it as empty rather than keeping the old text.
+
+### Free plan
+
+- Plan limits are not enforced while billing is disabled: there is no way to pay yet, so blocking a second project would be a dead end. Free users instead see a warning on the projects page that creating several private projects is temporary, and what the Free plan will include when paid plans launch. `GET /billing/me` gained `planLimits` to support it.
+
+### MCP
+
+- `create_entity_type`, `update_entity_type`, `delete_entity_type`, `get_entity_type_deletion_impact`, and `update_project` (name, description, visibility). Write tools stay hidden from read-only credentials, and `delete_entity_type` refuses to strand entities exactly as the REST endpoint does.
+
+### Deployment
+
+- Migration `20260916120000_item_type_description` adds a nullable `description` column to `item_types`. Additive and safe to apply online.
+- `BILLING_ENABLED` is declared in `turbo.json`; default behaviour is unchanged.
+
 ## [0.2.1] - 2026-09-18
 
 ### ChatGPT
