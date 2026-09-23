@@ -4,12 +4,12 @@ import {
   ArgumentsHost,
   HttpStatus,
   Logger,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   PrismaClientKnownRequestError,
   PrismaClientValidationError,
-} from '../../../generated/prisma/internal/prismaNamespace';
-import { Response } from 'express';
+} from "../../../generated/prisma/internal/prismaNamespace";
+import { Response } from "express";
 
 /**
  * Global exception filter that catches Prisma errors and maps them
@@ -32,11 +32,11 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       return this.handleKnownError(exception, response);
     }
 
-    // PrismaClientValidationError — bad query shape, usually a bug
-    this.logger.error('Prisma validation error', exception.message);
-    response.status(HttpStatus.BAD_REQUEST).json({
-      statusCode: HttpStatus.BAD_REQUEST,
-      message: 'Invalid request data',
+    // PrismaClientValidationError — bad query shape, a bug in this server
+    this.logger.error("Prisma validation error", exception.message);
+    response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      message: "Internal server error",
     });
   }
 
@@ -46,8 +46,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
   ) {
     switch (exception.code) {
       // Unique constraint violation
-      case 'P2002': {
-        const target = (exception.meta?.target as string[])?.join(', ') ?? 'field';
+      case "P2002": {
+        const target =
+          (exception.meta?.target as string[])?.join(", ") ?? "field";
         response.status(HttpStatus.CONFLICT).json({
           statusCode: HttpStatus.CONFLICT,
           message: `A record with that ${target} already exists`,
@@ -56,17 +57,17 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       }
 
       // Record not found (update/delete on non-existent row)
-      case 'P2025': {
+      case "P2025": {
         response.status(HttpStatus.NOT_FOUND).json({
           statusCode: HttpStatus.NOT_FOUND,
-          message: 'Record not found',
+          message: "Record not found",
         });
         return;
       }
 
       // Foreign key constraint failure
-      case 'P2003': {
-        const field = (exception.meta?.field_name as string) ?? 'reference';
+      case "P2003": {
+        const field = (exception.meta?.field_name as string) ?? "reference";
         response.status(HttpStatus.BAD_REQUEST).json({
           statusCode: HttpStatus.BAD_REQUEST,
           message: `Referenced ${field} does not exist`,
@@ -75,10 +76,10 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       }
 
       // Required relation not found
-      case 'P2018': {
+      case "P2018": {
         response.status(HttpStatus.BAD_REQUEST).json({
           statusCode: HttpStatus.BAD_REQUEST,
-          message: 'Required related record not found',
+          message: "Required related record not found",
         });
         return;
       }
@@ -90,7 +91,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         );
         response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          message: 'Internal server error',
+          message: "Internal server error",
         });
       }
     }
