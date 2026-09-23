@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixes
+
+- **Creating a custom entity type, or saving its name or description, failed with "Invalid request data".** The API build never regenerated the Prisma client, so a deploy that kept the previous client could not write the `description` column added in 0.2.2. `build` in `apps/api` now runs `prisma generate` first, and Turborepo caches the generated client with the build output. A query the client rejects is a server fault, so it now answers `500` instead of a `400` that blamed the caller's input.
+
+**Operator:** rebuild the API (or run `pnpm --filter api db:generate`) and restart it. No migration is needed.
+
 ## [0.2.3] - 2026-09-18
 
 ### Items can be filed, moved, and untyped
