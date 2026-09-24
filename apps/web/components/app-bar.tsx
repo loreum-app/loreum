@@ -86,9 +86,9 @@ const productFeatures: NavItem[] = [
   },
   {
     icon: ScrollText,
-    title: "Review Queue",
-    description: "Staged AI changes with diff view",
-    href: "/about#review-queue",
+    title: "Change History",
+    description: "Revert any change (coming soon)",
+    href: "/about#change-history",
   },
 ];
 

@@ -86,8 +86,9 @@ export default function AiWorldbuildingMcpPost() {
           Every app you connect is approved by you, for one world, with the
           access level you choose. Connected apps are listed in the world&apos;s
           settings and can be disconnected in one click, which immediately
-          invalidates their access. A review queue, where AI-proposed changes
-          wait for your approval with a diff view, is next on the roadmap.
+          invalidates their access. Change history, where any change can be
+          reverted on its own or the whole world rolled back to a point in time,
+          is next on the roadmap.
         </p>
 
         <h2>How to set it up</h2>
@@ -127,8 +128,9 @@ export default function AiWorldbuildingMcpPost() {
           generated content is grounded in your world instead of generic.
         </p>
         <p>
-          The review queue means you stay in control. The AI proposes and you
-          decide. No surprises in your canon.
+          You decide what each app can touch: read-only access keeps an AI out
+          of your canon entirely, and change history will let you undo anything
+          it writes.
         </p>
         <p>
           The MCP server is free and open source. You bring your own AI and

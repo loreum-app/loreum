@@ -107,13 +107,6 @@ const comparison: ComparisonRow[] = [
     notion: "Built-in (limited)",
   },
   {
-    feature: "AI review queue",
-    loreum: "Staged changes with diff view",
-    worldAnvil: "no",
-    campfire: "no",
-    notion: "no",
-  },
-  {
     feature: "Style guide for AI",
     loreum: "Voice, tone, POV, character voices",
     worldAnvil: "no",
@@ -230,9 +223,8 @@ export default function ComparePage() {
                 public wiki customization require a paid plan ($50/year+).
                 Loreum gives you all core features free, is open source, and
                 includes an MCP server with 27 tools so your AI assistant can
-                read and write your world data. Proposed changes land in a
-                review queue with a diff view. World Anvil has no AI integration
-                or API access.
+                read and write your world data. World Anvil has no AI
+                integration or API access.
               </p>
             </div>
             <div>
@@ -250,11 +242,11 @@ export default function ComparePage() {
               <h2 className="mb-2 text-lg font-semibold">Key differences</h2>
               <p className="text-sm text-muted-foreground">
                 Campfire is a polished desktop + web app with a one-time
-                purchase model. It has offline support and mature features.
-                It is closed source, has no public wiki, no AI integration,
-                and no API access. Loreum is free, open source, web-first, and
-                built for AI-assisted worldbuilding with a full MCP server,
-                style guide system, and review queue for AI-proposed changes.
+                purchase model. It has offline support and mature features. It
+                is closed source, has no public wiki, no AI integration, and no
+                API access. Loreum is free, open source, web-first, and built
+                for AI-assisted worldbuilding with a full MCP server and style
+                guide system.
               </p>
             </div>
             <div>
@@ -277,9 +269,7 @@ export default function ComparePage() {
                 writing. You can build a worldbuilding system in Notion with
                 databases and templates, but Loreum gives you purpose-built
                 structure out of the box, plus an MCP server with 27 tools that
-                lets AI understand your entire world in context. AI-proposed
-                changes go through a review queue with diff view before touching
-                your data.
+                lets AI understand your entire world in context.
               </p>
             </div>
             <div>

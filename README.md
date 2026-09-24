@@ -26,7 +26,7 @@
 
 Loreum is a database for fictional worlds. Track characters, relationships, timelines, organizations, maps, lore, and story structure in a purpose-built platform with instant search across everything. No scattered files, no lost notes, no contradictions.
 
-AI plugs into all of it. Connect Claude, Cursor, or any MCP-compatible assistant with one URL per world, approve read or read-and-write access, and it reads your entire world: entities, relationships, timeline, lore, and storyboard. With write access it can create and edit them too; a review queue for AI-proposed changes is next on the roadmap.
+AI plugs into all of it. Connect Claude, Cursor, or any MCP-compatible assistant with one URL per world, approve read or read-and-write access, and it reads your entire world: entities, relationships, timeline, lore, and storyboard. With write access it can create and edit them too; change history with one-click revert, for every change by you or your AI, is next on the roadmap.
 
 **For novelists, screenwriters, game designers, tabletop RPG game masters, comic book writers, and anyone building a fictional universe that needs structure.**
 
@@ -37,7 +37,7 @@ AI plugs into all of it. Connect Claude, Cursor, or any MCP-compatible assistant
 - **Timeline** - Events and eras on an interactive Gantt chart with drag-to-edit and custom calendar support
 - **Lore Wiki** - Canonical world articles with entity mentions, categories, and tags
 - **Storyboard** - Plotlines, works, chapters, and scenes cross-referenced to your world data
-- **Style Guide** - Voice, tone, POV, pacing, dialogue rules, scene overrides, and per-character voice notes
+- **Style Guide** (in progress) - Voice, tone, POV, pacing, dialogue rules, scene overrides, and per-character voice notes
 - **AI Integration (MCP)** - Remote MCP server (SDK v2) with 36 tools; connect claude.ai, Claude Code, Cursor and others with one URL per world
 - **OAuth 2.1 + API Keys** - Built-in authorization server (PKCE, rotating refresh tokens, per-world token binding, connected-apps management) plus project-scoped API keys
 - **Public Wiki** - Share your world as a read-only site while keeping secrets and drafts private
@@ -48,7 +48,7 @@ AI plugs into all of it. Connect Claude, Cursor, or any MCP-compatible assistant
 
 1. **Build your world** in the Loreum web app with entities, relationships, timelines, lore, and a style guide
 2. **Add AI** by bringing your own via MCP or using the built-in assistant. Build solo or invite collaborators
-3. **Write with context** as AI reads your canon to generate grounded content. Proposed changes go through a review queue
+3. **Write with context** as AI reads your canon to generate grounded content. Change history with revert is coming soon
 
 ## Tech Stack
 

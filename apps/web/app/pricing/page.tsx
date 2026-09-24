@@ -65,7 +65,7 @@ const tiers = [
       "Everything in Pro, plus:",
       "Invite editors, viewers, commenters",
       "Real-time co-editing (Yjs)",
-      "Collaborator suggestion mode (same review queue)",
+      "Collaborator suggestion mode",
       "Activity feed and audit log",
       "500 AI requests per seat / month",
       "Role-based permissions",
@@ -105,7 +105,7 @@ const comparison: ComparisonRow[] = [
   },
   { feature: "API key authentication", free: true, pro: true, team: true },
   {
-    feature: "Review queue (AI staging area, coming soon)",
+    feature: "Change history & revert (coming soon)",
     free: true,
     pro: true,
     team: true,
@@ -262,13 +262,13 @@ export default function PricingPage() {
           </p>
         </div>
         <div>
-          <h3 className="font-medium">What is the review queue?</h3>
+          <h3 className="font-medium">What is change history?</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            When AI writes to your world through the MCP server, changes land in
-            a staging area instead of modifying your data directly. You see a
-            diff of each proposed change and can accept, edit, or reject it. You
-            can also batch-accept an entire AI session if you trust the output.
-            This keeps you in control of your canon.
+            Coming soon: every change to your world, whether you or an AI made
+            it, is logged with who made it and when. You can revert any single
+            change, or roll the whole world back to a point in time after
+            previewing what will be restored. History covers the last 30 days
+            and never fewer than your latest 500 changes.
           </p>
         </div>
         <div>

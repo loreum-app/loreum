@@ -1,10 +1,10 @@
 # MCP Implementation Plan
 
-Scoped plan for completing the MCP server to a testable state. Covers API prerequisites, auth, review queue, and MCP tool expansion.
+Scoped plan for completing the MCP server to a testable state. Covers API prerequisites, auth, and MCP tool expansion. The review queue originally planned as Phase 4 has been dropped in favour of change history ([CHANGE_HISTORY.md](CHANGE_HISTORY.md)).
 
 **Created:** 2026-04-24
-**Updated:** 2026-09-05
-**Status:** Phases 1–3 and the OAuth phase complete (SDK v2, per-project URLs, claude.ai connectors); Phase 4 (review queue) next
+**Updated:** 2026-09-24
+**Status:** Phases 1–3 and the OAuth phase complete (SDK v2, per-project URLs, claude.ai connectors); Phase 4 (review queue) dropped, replaced by change history; Phase 5 write tools shipped in Phase 3
 **Reference:** See TODO.md > Near-Term for task tracking
 
 ---
@@ -45,7 +45,7 @@ The MCP server is a stateless Streamable HTTP endpoint built into the API (`apps
 
 **Search covers entities + lore only:** The `search_project` tool queries entity names and lore content via Prisma `contains`. Timeline events and scenes aren't searched yet, and the REST `GET /projects/:slug/search` endpoint is still a stub.
 
-**Write tools bypass review queue:** All mutation tools write directly to the DB. The spec requires all MCP writes to go through `PendingChange` staging.
+**Write tools are not yet logged:** All mutation tools write directly to the DB, which is intended. Change history ([CHANGE_HISTORY.md](CHANGE_HISTORY.md)) will log each write so it can be reverted.
 
 **Style Guide doesn't exist yet:** The model, migration, service, controller, and schema fields (`voiceNotes`, `styleNotes`) are all long-term work. The `get_style_guide` and `set_style_guide` MCP tools cannot be built until the Style Guide feature is implemented.
 
@@ -122,63 +122,13 @@ All domain services already exist. MCP module only.
 
 **Test gate:** From Claude Desktop, an AI can navigate from projects → entities → relationships → lore → timeline → storyboard scenes without hitting any dead ends. Search returns real results.
 
-### Phase 4: Review Queue (API + MCP + UI)
+### Phase 4: Review Queue — DROPPED
 
-**Goal:** All MCP write operations stage changes as `PendingChange` records instead of writing directly. Users review and accept/reject from the web UI.
+Staging every MCP write for approval was dropped: it makes each agent session wait on a person. Writes apply directly, and change history logs every write so it can be reverted, one event at a time or back to a point in time. See [CHANGE_HISTORY.md](CHANGE_HISTORY.md) and TODO.md > Change History & Revert.
 
-**Scope:** API-side service + controller, MCP tool handler updates, web UI.
+### Phase 5: Expand MCP Write Tools — COMPLETE
 
-#### API work (`apps/api/`)
-
-1. PendingChange service:
-   - `create(projectId, apiKeyId, batchId, operation, targetModel, targetId, proposedData, previousData)`
-   - `listByProject(projectId, { status?, batchId? })`
-   - `accept(id)` — apply `proposedData` to target model, set status ACCEPTED
-   - `reject(id)` — set status REJECTED
-   - `batchAccept(batchId)` — accept all PENDING in batch, in dependency order (creates before relationships)
-   - Snapshot `previousData` on update/delete for diff display
-
-2. PendingChange controller:
-   - `GET /projects/:slug/pending-changes?status=&batchId=`
-   - `POST /projects/:slug/pending-changes/:id/accept`
-   - `POST /projects/:slug/pending-changes/:id/reject`
-   - `POST /projects/:slug/pending-changes/batch-accept` (body: `{ batchId }`)
-
-#### MCP work (`apps/api/src/mcp/`)
-
-3. Update existing write tools (`create_entity`, `update_entity`, `create_relationship`, `create_lore_article`) to:
-   - Call the PendingChange service instead of the direct CRUD services
-   - Return confirmation that the change was staged, not applied
-   - Include `batchId` (generated per MCP session or conversation)
-
-#### Web UI work (`apps/web/`)
-
-5. Review queue page: list pending changes grouped by batch
-6. Per-change accept/reject buttons
-7. Batch accept/reject buttons
-8. Diff view for updates (before/after)
-9. Preview for creates
-10. Sidebar badge showing pending count
-
-**Test gate:** From Claude Desktop, create an entity via MCP. Verify it appears in the review queue (not in the entity list). Accept it from the web UI. Verify it now appears in the entity list.
-
-### Phase 5: Expand MCP Write Tools (blocked on Phase 4)
-
-**Goal:** Add the remaining mutation tools, all routing through PendingChange.
-
-| Tool                    | API Endpoint             | Notes |
-| ----------------------- | ------------------------ | ----- |
-| `update_lore_article`   | Staged via PendingChange |       |
-| `delete_entity`         | Staged via PendingChange |       |
-| `delete_relationship`   | Staged via PendingChange |       |
-| `delete_lore_article`   | Staged via PendingChange |       |
-| `create_timeline_event` | Staged via PendingChange |       |
-| `update_timeline_event` | Staged via PendingChange |       |
-| `delete_timeline_event` | Staged via PendingChange |       |
-| `create_scene`          | Staged via PendingChange |       |
-| `update_scene`          | Staged via PendingChange |       |
-| `create_plot_point`     | Staged via PendingChange |       |
-| `update_plot_point`     | Staged via PendingChange |       |
+The remaining mutation tools (`update_lore_article`, `delete_entity`, `delete_relationship`, `delete_lore_article`, the timeline event, scene, and plot point tools) shipped with Phase 3, writing directly.
 
 ---
 
@@ -195,4 +145,3 @@ These are explicitly deferred and should not be built during this work:
 - The MCP endpoint lives in `apps/api/src/mcp/` and calls domain services directly — it does NOT go through HTTP or the REST controllers.
 - The MCP layer contains no business logic. If a handler needs an if/else that makes a domain decision, it belongs in the domain service.
 - Tool handlers do: input schema (zod) → service call → JSON response shaping. Nothing else.
-- Review queue UI work happens in `apps/web/`.

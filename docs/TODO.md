@@ -30,38 +30,23 @@ Tracked tasks for Loreum. Near-term is the next couple weeks, long-term is every
 - [ ] Response-size caps / pagination on large list tools
 - [ ] Refresh-token grace window for dropped token responses (strict rotation today)
 
-### MCP Review Queue (Staging Area)
+### Change History & Revert
 
-- [ ] PendingChange service: create pending change, list by project/status/batch, accept, reject
-- [ ] Accept logic: apply `proposedData` to the target model (create/update/delete), set status to ACCEPTED
-- [ ] Reject logic: set status to REJECTED
-- [ ] Batch accept: apply all PENDING changes in a batch in dependency order
-- [ ] Snapshot `previousData` on update/delete for diff display
-- [ ] PendingChange controller: `GET /projects/:slug/pending-changes`, `POST .../accept`, `POST .../reject`, `POST .../batch-accept`
-- [ ] Route MCP write tools through PendingChange instead of direct writes
-- [ ] MCP tool responses: return confirmation that change was staged, not applied
-- [ ] Review queue page: list view grouped by batch, operation badges (create/update/delete)
-- [ ] Diff view for updates (side-by-side, highlight changed fields)
-- [ ] Preview for creates (rendered as the record would appear)
-- [ ] Delete confirmation with referencing records listed
-- [ ] Per-change accept/edit/reject buttons
-- [ ] Batch accept/reject buttons
-- [ ] Sidebar badge showing pending change count
-- [ ] Notification when new pending changes arrive
+Replaces the review queue. Design: [CHANGE_HISTORY.md](CHANGE_HISTORY.md)
 
-### MCP Write Tools (blocked on Review Queue)
-
-- [ ] `update_lore_article`
-- [ ] `delete_entity`
-- [ ] `delete_relationship`
-- [ ] `delete_lore_article`
-- [ ] `create_timeline_event`
-- [ ] `update_timeline_event`
-- [ ] `delete_timeline_event`
-- [ ] `create_scene`
-- [ ] `update_scene`
-- [ ] `create_plot_point`
-- [ ] `update_plot_point`
+- [ ] Drop `PendingChange` model and `ChangeStatus` enum (unused); keep `ChangeOperation` for change records
+- [ ] `ChangeEvent` / `ChangeRecord` models + migration
+- [ ] `ChangeLogService`: record before/after rows in the same transaction as each write, with actor and source
+- [ ] Route every world write through it (REST services and MCP tools)
+- [ ] Snapshot the cascaded subtree on deletes (relationships, timeline links, lore mentions, scene appearances, tags, org members)
+- [ ] Revert one event: reverse order, restore original ids, skip and report fields changed since
+- [ ] Revert to a point in time as one `REVERT_TO_TIME` event
+- [ ] Preview endpoints for both reverts (net effect grouped by entity)
+- [ ] History endpoints: paginated list with entity/source filters, earliest revertable time; owner-only
+- [ ] Retention job on the maintenance queue: prune events older than 30 days only beyond the newest 500 per project
+- [ ] History page: event list, per-event revert, "Revert world to…" with earliest-time banner
+- [ ] History tab on entity, lore, and scene pages
+- [ ] Revert preview dialog
 
 ### Global Design & Polish
 
@@ -121,7 +106,7 @@ Tracked tasks for Loreum. Near-term is the next couple weeks, long-term is every
 - [ ] Prisma migration
 - [ ] Style guide service + controller (GET/PUT `/projects/:slug/style-guide`)
 - [ ] MCP tool: `get_style_guide` - read tool (blocked on style guide model/service/controller)
-- [ ] MCP tool: `set_style_guide` - write tool (blocked on style guide + review queue)
+- [ ] MCP tool: `set_style_guide` - write tool (blocked on style guide model/service/controller)
 - [ ] Style guide wizard UI (step-by-step: dropdowns for POV/tense/voice/tone, text areas for rules/examples)
 - [ ] Style guide editor UI (full form view, accessible after wizard or directly)
 - [ ] Trigger wizard on project creation (optional) + accessible from style guide page any time
@@ -150,15 +135,13 @@ Tracked tasks for Loreum. Near-term is the next couple weeks, long-term is every
 - [ ] Free/Pro tier gating
 - [ ] Additional OAuth providers (Discord, GitHub)
 - [ ] Email notifications via Resend
-- [ ] MCP review queue (see dedicated section above)
 
 ### Phase 3 - Collaboration
 
 - [ ] Team invitations + roles (owner, editor, viewer, commenter)
 - [ ] Real-time collaborative editing (Yjs + y-websocket + TipTap)
 - [ ] Presence indicators (cursors)
-- [ ] Activity feed / audit log
-- [ ] Entity versioning / history
+- [ ] Activity feed and entity history: covered by Change History & Revert (see Near-Term)
 
 ### Phase 4 - Game Design
 
