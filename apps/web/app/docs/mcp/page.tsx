@@ -239,11 +239,11 @@ export default function McpDocsPage() {
         </section>
 
         <section>
-          <h2>Review queue</h2>
+          <h2>Change history</h2>
           <p className="text-sm text-muted-foreground">
-            Write tools currently change your world directly. A review queue,
-            where AI-proposed changes wait in a staging area with a diff for you
-            to accept or reject, is on the{" "}
+            Write tools change your world directly. Change history, which logs
+            every change so you can revert it or roll the world back to a point
+            in time, is on the{" "}
             <Link href="/roadmap" className="underline hover:text-foreground">
               roadmap
             </Link>

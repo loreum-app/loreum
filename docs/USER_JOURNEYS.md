@@ -225,7 +225,7 @@ Detailed user flows through Loreum. These inform the data model, API surface, an
 - How is AI token usage tracked and limited? Per-month quota? Pay-per-use on top of subscription?
 - Does the AI chat history persist between sessions?
 - For writing suggestions, does the AI have access to ALL project data or just the current context (scene + related entities)?
-- Can the AI create entities/relationships directly, or does it always go through the review queue?
+- ~~Can the AI create entities/relationships directly, or does it always go through the review queue?~~ Decided: writes apply directly and are logged for revert ([CHANGE_HISTORY.md](CHANGE_HISTORY.md)).
 - Is consistency checking on-demand only, or can it run automatically (e.g., on save)?
 
 ---
@@ -248,35 +248,28 @@ Detailed user flows through Loreum. These inform the data model, API surface, an
     --- AI writes to the world ---
 8.  User says: "Add a new character named Mace Windu, he's a Jedi Master"
 9.  Claude calls MCP tool: create_entity(type=CHARACTER, name="Mace Windu", ...)
-10. → Change goes to the REVIEW QUEUE (not directly live)
-11. User opens Loreum web → sees notification: "1 pending suggestion"
-12. Opens review queue → sees:
-    "Claude suggested: Create character 'Mace Windu'
-     Type: Character
-     Summary: Jedi Master and member of the Jedi Council
-     Status: alive
-     Species: human
-     Role: supporting"
-13. User can:
-    a. Accept → entity created as-is
-    b. Edit → modify fields, then accept
-    c. Reject → discarded
-14. Accepted entity appears in the project immediately
+10. → Entity is created immediately and the change is logged
+11. User opens Loreum web → Mace Windu is in the project; History shows
+    "Claude created character 'Mace Windu'" with a Revert button
+12. User can:
+    a. Keep it
+    b. Edit it like any other entity
+    c. Revert → entity removed (the revert is logged and can itself be undone)
 
     --- Bulk operations ---
-15. User says: "Create all the main characters from the prequel trilogy"
-16. Claude creates multiple entities → all go to review queue
-17. User reviews them as a batch: accept all, reject some, edit others
+13. User says: "Create all the main characters from the prequel trilogy"
+14. Claude creates multiple entities, each call logged as its own event
+15. User doesn't like the result → History → "Revert world to…" the time
+    before the session → preview lists what will be removed → confirm
 ```
 
 **Decision points:**
 
-- Does the review queue apply to ALL MCP writes, or can the user configure "trusted mode" (direct writes)?
+- ~~Does the review queue apply to ALL MCP writes, or can the user configure "trusted mode" (direct writes)?~~ Decided: no review queue; all writes apply directly and are logged.
 - How does the MCP server authenticate? API key per user? Per project?
 - Should MCP reads also be gated (e.g., a collaborator's AI can only read what their role allows)?
-- Does the review queue show a diff for updates (not just creates)?
-- Can the user undo an accepted suggestion?
-- Rate limits on MCP writes to prevent AI from flooding the queue?
+- ~~Can the user undo an AI change?~~ Decided: yes, any single change, or the whole world back to a point in time.
+- Rate limits on MCP writes to prevent an AI from making large unwanted changes quickly?
 
 ---
 
@@ -352,24 +345,24 @@ Detailed user flows through Loreum. These inform the data model, API surface, an
 
 Key requirements surfaced by these journeys that affect the schema:
 
-| Journey | Requirement               | Schema Impact                                                |
-| ------- | ------------------------- | ------------------------------------------------------------ |
-| 1       | Project templates         | `ProjectTemplate` model or template JSON blobs               |
-| 2       | Entity mentions auto-link | Logic to parse `[[links]]` and update join tables            |
-| 3       | Per-entity visibility     | `isPublic` field on Entity, LoreArticle                      |
-| 3       | SEO for public pages      | Open Graph fields or generation from existing data           |
-| 4       | Team membership           | `ProjectMember` model (userId, projectId, role)              |
-| 4       | Invitations               | `ProjectInvitation` model                                    |
-| 4       | Comments                  | `Comment` model (polymorphic or per-type)                    |
-| 4       | Activity log              | `ActivityLog` model                                          |
-| 4       | Real-time presence        | WebSocket state (in-memory, not persisted)                   |
-| 5       | Subscriptions             | `Subscription` model, Stripe integration                     |
-| 5       | AI chat history           | `AiConversation`, `AiMessage` models                         |
-| 5       | Consistency report        | Generated on-demand, possibly cached                         |
-| 6       | Review queue              | `PendingChange` model (entity type, action, payload, status) |
-| 6       | MCP auth                  | API key model or token scoping                               |
-| 7       | Scene prose content       | `content` field (Tiptap JSON) — already exists               |
-| 7       | Scene status              | `status` enum on Scene                                       |
-| 7       | Word count                | `wordCount` field on Scene, computed on save                 |
-| 7       | Multi-entity plot points  | `PlotPointEntity` join table replacing single FK             |
-| 7       | Version history           | `EntityVersion` / `ArticleVersion` models                    |
+| Journey | Requirement               | Schema Impact                                                 |
+| ------- | ------------------------- | ------------------------------------------------------------- |
+| 1       | Project templates         | `ProjectTemplate` model or template JSON blobs                |
+| 2       | Entity mentions auto-link | Logic to parse `[[links]]` and update join tables             |
+| 3       | Per-entity visibility     | `isPublic` field on Entity, LoreArticle                       |
+| 3       | SEO for public pages      | Open Graph fields or generation from existing data            |
+| 4       | Team membership           | `ProjectMember` model (userId, projectId, role)               |
+| 4       | Invitations               | `ProjectInvitation` model                                     |
+| 4       | Comments                  | `Comment` model (polymorphic or per-type)                     |
+| 4       | Activity log              | `ActivityLog` model                                           |
+| 4       | Real-time presence        | WebSocket state (in-memory, not persisted)                    |
+| 5       | Subscriptions             | `Subscription` model, Stripe integration                      |
+| 5       | AI chat history           | `AiConversation`, `AiMessage` models                          |
+| 5       | Consistency report        | Generated on-demand, possibly cached                          |
+| 6       | Change history & revert   | `ChangeEvent` + `ChangeRecord` models (see CHANGE_HISTORY.md) |
+| 6       | MCP auth                  | API key model or token scoping                                |
+| 7       | Scene prose content       | `content` field (Tiptap JSON) — already exists                |
+| 7       | Scene status              | `status` enum on Scene                                        |
+| 7       | Word count                | `wordCount` field on Scene, computed on save                  |
+| 7       | Multi-entity plot points  | `PlotPointEntity` join table replacing single FK              |
+| 7       | Version history           | `EntityVersion` / `ArticleVersion` models                     |

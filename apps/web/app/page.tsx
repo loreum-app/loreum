@@ -10,7 +10,7 @@ import {
   Network,
   ScrollText,
   Layers,
-  Globe,
+  History,
   Bot,
   Gamepad2,
   PenTool,
@@ -66,10 +66,10 @@ const features = [
       "Plotlines, works, chapters, and scenes, all cross-referenced to your world data, timeline, and characters.",
   },
   {
-    icon: Globe,
-    title: "Review Queue",
+    icon: History,
+    title: "Change History (coming soon)",
     description:
-      "AI-suggested changes land in a staging area. Review a diff of every creation, update, and deletion before it touches your canon.",
+      "Every change, by you or your AI, is logged. Revert any single change, or roll your whole world back to a point in time.",
   },
 ];
 
@@ -222,8 +222,8 @@ export default function Home() {
           <p className="mx-auto mb-10 max-w-2xl text-center text-sm text-muted-foreground">
             Because your world is structured data instead of scattered files, AI
             can query all of it. Bring your own AI or use the built-in
-            assistant. Proposed changes go through a review queue before
-            touching your canon.
+            assistant. Change history is coming soon, so anything an AI writes
+            can be reverted.
           </p>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {aiUseCases.map((uc) => (
@@ -294,8 +294,8 @@ export default function Home() {
               </div>
               <h3 className="font-medium">Write with context</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                AI reads your canon to generate grounded content. Proposed
-                changes land in a review queue for you to accept.
+                AI reads your canon to generate grounded content. Soon, any
+                change can be reverted.
               </p>
             </div>
           </div>
