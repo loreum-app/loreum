@@ -12,7 +12,7 @@ const releases = [
       "API key authentication for scripts and header-only MCP clients",
       "36 MCP tools: full read coverage plus writes for entities, relationships, lore, timeline, eras, plotlines, works, chapters, and scenes",
       "Cross-content search (entities, lore, timeline, scenes) via MCP and REST",
-      "Review queue: AI-proposed changes land in a staging area with diff view (next)",
+      "Change history: every change logged, revert one or roll back to a point in time (next)",
     ],
   },
   {

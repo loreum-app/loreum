@@ -100,10 +100,10 @@ const aiIntegration = [
   },
   {
     icon: GitPullRequest,
-    title: "Review Queue",
+    title: "Change History",
     description:
-      "Inspect and approve AI-proposed changes before they touch your canon.",
-    href: "/docs/review-queue",
+      "Revert any change, or roll your world back to a point in time.",
+    href: "/docs/change-history",
     status: "coming-soon",
   },
   {

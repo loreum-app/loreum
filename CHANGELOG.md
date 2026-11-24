@@ -8,6 +8,13 @@
 
 **Operator:** rebuild the API (or run `pnpm --filter api db:generate`) and restart it. No migration is needed.
 
+### Roadmap: change history replaces the review queue
+
+- The MCP review queue is dropped. Staging every AI write for approval made each agent session wait on a person. Writes keep applying directly, and **change history** will log every write, from people and AI alike, so any single change can be reverted, or the whole world rolled back to a point in time after a preview. History is kept for 30 days and never fewer than the newest 500 changes. Design: [docs/CHANGE_HISTORY.md](docs/CHANGE_HISTORY.md).
+- Roadmap, product spec, TODO, MCP plan, user journeys, and site copy (home, about, pricing, compare, docs, blog, what's new, nav) updated to match. The compare table no longer lists the review queue as a Loreum feature.
+- v0.5's entity versioning and activity feed are folded into change history.
+- The README no longer lists the style guide as shipped; it is in progress.
+
 ## [0.2.3] - 2026-09-18
 
 ### Items can be filed, moved, and untyped

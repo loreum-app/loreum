@@ -65,7 +65,7 @@ const phases: RoadmapPhase[] = [
   },
   {
     name: "v0.2: AI Integration",
-    description: "Style guide, MCP authentication, and the review queue.",
+    description: "Style guide, MCP authentication, and change history.",
     items: [
       {
         title: "Style guide",
@@ -86,9 +86,9 @@ const phases: RoadmapPhase[] = [
         status: "done",
       },
       {
-        title: "Review queue (staging area)",
+        title: "Change history & revert",
         description:
-          "AI-proposed changes land as pending. Diff view for updates, preview for creates, batch accept/reject.",
+          "Every change, by you or your AI, is logged. Revert any single change, or roll the whole world back to a point in time with a preview first.",
         status: "planned",
       },
       {
@@ -179,16 +179,6 @@ const phases: RoadmapPhase[] = [
       {
         title: "Real-time co-editing",
         description: "Yjs CRDT sync via WebSocket",
-        status: "planned",
-      },
-      {
-        title: "Activity feed",
-        description: "See who changed what, when",
-        status: "planned",
-      },
-      {
-        title: "Entity versioning",
-        description: "History and rollback for all content",
         status: "planned",
       },
     ],

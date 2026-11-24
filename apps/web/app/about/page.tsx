@@ -86,11 +86,11 @@ const features = [
       "A remote Model Context Protocol server lets Claude, Cursor, and other AI assistants read and write your world data. Connect with one URL per world: the app signs in with your Loreum account and you approve read or read-and-write access. Search entities, read relationships, browse the timeline, create characters, add lore articles, and draft scenes. Free on all tiers. Bring your own AI, bring your own tokens.",
   },
   {
-    id: "review-queue",
+    id: "change-history",
     icon: GitPullRequest,
-    title: "Review Queue (coming soon)",
+    title: "Change History (coming soon)",
     description:
-      "Planned: every AI write operation lands in a staging area instead of modifying your canon directly. You see a diff-style view of each proposed creation, update, or deletion. Accept, edit, or reject each change individually, or batch-accept a full AI session. Changes are grouped by session so you can review them in context. The same mechanism powers collaborator suggestion mode for teams.",
+      "Planned: every change to your world, whether you made it or an AI did, is logged with who made it and when. Revert any single change, or roll the whole world back to a point in time such as yesterday at 3pm, with a preview of what will be restored first. Reverts are logged too, so they can be undone. History is kept for 30 days, and never fewer than your latest 500 changes.",
   },
   {
     id: "api-keys",

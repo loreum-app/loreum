@@ -24,7 +24,7 @@ const posts = [
     slug: "ai-worldbuilding-mcp",
     title: "Using AI to Read and Write Your World: MCP for Worldbuilders",
     description:
-      "How Loreum's MCP server lets AI assistants read your world and propose changes through a review queue.",
+      "How Loreum's MCP server lets AI assistants read your world and write to it, with you in control of access.",
     date: "2026-04-02",
     category: "Feature",
   },

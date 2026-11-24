@@ -272,7 +272,7 @@ When assisting with a scene, the AI layers three sources: **base style guide →
 | ---------------------------------------------------- | ------- | ---- |
 | MCP server (external AI access)                      | Built   | Free |
 | MCP authentication (OAuth 2.1 connectors + API keys) | Built   | Free |
-| MCP review queue (staging area)                      | Planned | Free |
+| Change history & revert (section 16)                 | Planned | Free |
 | In-app AI chat (query your world)                    | Planned | Pro  |
 | AI writing assistance in scene editor                | Planned | Pro  |
 | Style-aware generation                               | Planned | Pro  |
@@ -312,7 +312,7 @@ Users generate project-scoped API keys from project settings in the web UI. Each
 
 #### MCP Tool Surface
 
-The MCP server exposes tools for AI clients to read and write world data. Write operations currently apply directly; routing them through the review queue (section 16) is the next phase.
+The MCP server exposes tools for AI clients to read and write world data. Write operations apply directly. Every write will be logged so it can be reverted (section 16).
 
 **Read Tools**
 
@@ -332,7 +332,7 @@ The MCP server exposes tools for AI clients to read and write world data. Write 
 
 **Write Tools**
 
-All write tools produce `PendingChange` records in the review queue rather than modifying data directly. The user reviews and accepts changes from the web UI.
+Write tools apply changes directly. Once change history ships (section 16), each call is logged as an event that the owner can revert from the web UI.
 
 | Tool                    | Description                                          | Status  |
 | ----------------------- | ---------------------------------------------------- | ------- |
@@ -435,84 +435,26 @@ Real-time collaboration via Yjs (CRDT):
 - Conflict-free merging, no lock-out
 - Document state persisted to Postgres
 
-### 16. MCP Review Queue (Staging Area)
+### 16. Change History & Revert
 
-| Feature                                       | Status  | Tier |
-| --------------------------------------------- | ------- | ---- |
-| PendingChange model + API                     | Planned | Free |
-| Review queue page (list of pending changes)   | Planned | Free |
-| Diff view for updates (before/after)          | Planned | Free |
-| Preview for creates (full proposed record)    | Planned | Free |
-| Deletion confirmation with record summary     | Planned | Free |
-| Per-change actions: accept / edit / reject    | Planned | Free |
-| Batch accept / batch reject                   | Planned | Free |
-| Sidebar badge (pending change count)          | Planned | Free |
-| Change grouping by session (batch context)    | Planned | Free |
-| Collaborator suggestion mode (same mechanism) | Planned | Pro  |
+| Feature                                                     | Status  | Tier |
+| ----------------------------------------------------------- | ------- | ---- |
+| Change log of every write (REST and MCP), with actor + time | Planned | Free |
+| Revert a single change                                      | Planned | Free |
+| Revert the world to a point in time, with preview           | Planned | Free |
+| History page (project sidebar)                              | Planned | Free |
+| History tab on entity, lore, and scene pages                | Planned | Free |
+| Retention: 30 days, never fewer than the newest 500 changes | Planned | Free |
 
-#### How It Works
+Replaces the MCP review queue, which staged AI writes for approval and has been dropped. Writes apply immediately, and every one is logged so it can be undone. Full design: [CHANGE_HISTORY.md](CHANGE_HISTORY.md).
 
-Every MCP write operation (create, update, delete) produces a `PendingChange` record instead of modifying live data. The author reviews these changes from a dedicated staging area in the web UI before they touch the canonical world state.
+- **Every write is logged**, from people and AI alike, one event per write transaction, with its actor, its source (REST or MCP), and a timestamp.
+- **Revert one change**, or **revert to a point in time** ("yesterday at 3pm"), which undoes every later change, newest first. Reverts are logged too, so they can be undone.
+- **Point-in-time reverts show a preview** grouped by entity before anything changes.
+- **Retention** keeps a change if it is under 30 days old or among the project's newest 500, so an idle world keeps its recent history.
+- **Only owners** can see history or revert. Snapshots include secrets and never reach the public wiki.
 
-**Write flow:**
-
-1. AI calls a write tool (e.g. `create_entity`, `update_entity`, `delete_entity`)
-2. The API validates the payload, then creates a `PendingChange` record instead of applying it
-3. The MCP tool returns a confirmation that the change was staged (not applied)
-4. The user sees a badge on the "Review" nav item showing the pending count
-5. The user opens the review queue and inspects each change
-6. On **accept**: the change is applied to the live database
-7. On **reject**: the pending change is discarded
-8. On **edit**: the user modifies the proposed data in a form, then accepts the edited version
-
-**Database model: `PendingChange`**
-
-```
-PendingChange
-  id            String    @id
-  projectId     String    (FK -> Project)
-  apiKeyId      String?   (FK -> ApiKey, which key created this)
-  batchId       String    (groups related changes from one AI session)
-  operation     Enum      CREATE | UPDATE | DELETE
-  targetModel   String    "Entity" | "Relationship" | "LoreArticle" | "TimelineEvent" | "Scene" | "PlotPoint" | "StyleGuide"
-  targetId      String?   (existing record ID, null for CREATE)
-  proposedData  Json      (full record for CREATE, partial fields for UPDATE, empty for DELETE)
-  previousData  Json?     (snapshot of current record before change, for diff display)
-  status        Enum      PENDING | ACCEPTED | REJECTED
-  reviewedAt    DateTime?
-  createdAt     DateTime
-```
-
-The `batchId` groups changes from a single AI session. If the AI creates a character, adds two relationships, and writes a lore article in one conversation, those four changes share a `batchId` so the user can review them as a coherent set.
-
-The `previousData` field stores a snapshot of the record at the time the change was proposed. For updates, this enables a side-by-side diff. For deletes, it shows what will be removed.
-
-#### Review Queue UX
-
-The review queue is a dedicated page accessible from the project sidebar. It functions like a pull request diff view.
-
-**List view:**
-
-- Changes grouped by batch, with a timestamp and source label (API key name)
-- Each change shows: operation badge (green CREATE, yellow UPDATE, red DELETE), target type, target name
-- Batch header with "Accept All" / "Reject All" buttons
-- Individual accept/reject buttons per change
-
-**Detail view (per change):**
-
-- **CREATE**: Full preview of the proposed record, rendered the same way it would appear on its detail page. Accept creates the record.
-- **UPDATE**: Side-by-side diff showing current values on the left and proposed values on the right. Changed fields are highlighted. The user can edit the proposed values before accepting. Accept applies the partial update.
-- **DELETE**: Summary card of the record that would be removed, with a list of what else references it (relationships, scenes, plot points). Accept deletes the record.
-
-**Batch view:**
-
-- Expanding a batch shows all changes in sequence with a summary: "Claude Desktop created 2 entities, updated 1, added 3 relationships"
-- "Accept All" applies every pending change in the batch in dependency order (creates before relationship links, etc.)
-- Users who trust their AI workflow can batch-accept regularly; users who want control review each change
-
-#### Collaborator Suggestions (Pro)
-
-The same `PendingChange` mechanism powers collaborator suggestion mode. When a team member with "suggest" permissions edits an entity, their changes produce pending records that the project owner reviews. The review queue shows MCP changes and collaborator suggestions in the same interface, distinguished by source.
+Collaborator suggestion mode previously reused the review queue. It needs its own design under Collaboration.
 
 ### 17. Admin & Observability
 
