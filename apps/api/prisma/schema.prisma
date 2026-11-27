@@ -165,6 +165,9 @@ model Project {
   plotlines Plotline[]
   works     Work[]
 
+  // Style guide
+  styleGuide StyleGuide?
+
   // MCP
   apiKeys        ApiKey[]
   ledgerEntries  LedgerEntry[]
@@ -224,11 +227,12 @@ model Entity {
 // ── Extension tables ──
 
 model Character {
-  entityId String @id
-  status   String? // alive, deceased, unknown, dormant, distributed
-  species  String? // human, synth, ai, hybrid
-  age      String?
-  role     String? // protagonist, antagonist, deuteragonist, supporting, minor
+  entityId   String  @id
+  status     String? // alive, deceased, unknown, dormant, distributed
+  species    String? // human, synth, ai, hybrid
+  age        String?
+  role       String? // protagonist, antagonist, deuteragonist, supporting, minor
+  voiceNotes String? @db.Text
 
   entity         Entity      @relation(fields: [entityId], references: [id], onDelete: Cascade)
   orgMemberships OrgMember[]
@@ -567,6 +571,7 @@ model Scene {
   sequenceNumber  Int
   description     String? @db.Text
   content         String? @db.Text
+  styleNotes      String? @db.Text
   plotlineId      String?
   locationId      String?
   timelineEventId String?
@@ -596,6 +601,30 @@ model SceneCharacter {
 
   @@id([sceneId, entityId])
   @@map("scene_characters")
+}
+
+// ============================================================================
+// STYLE GUIDE (one per project)
+// ============================================================================
+
+model StyleGuide {
+  projectId    String  @id
+  pov          String? // first, second, third-limited, third-omniscient
+  tense        String? // past, present
+  voice        String? @db.Text
+  tone         String? @db.Text
+  pacing       String? @db.Text
+  dialogueRules String? @db.Text
+  proseStyle   String? @db.Text
+  vocabulary   String? @db.Text
+  customRules  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("style_guides")
 }
 
 // ============================================================================

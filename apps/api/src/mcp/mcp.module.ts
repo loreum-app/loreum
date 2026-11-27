@@ -8,6 +8,7 @@ import { LoreModule } from "../lore/lore.module";
 import { TimelineModule } from "../timeline/timeline.module";
 import { TagsModule } from "../tags/tags.module";
 import { SearchModule } from "../search/search.module";
+import { StyleGuideModule } from "../style-guide/style-guide.module";
 import { OAuthModule } from "../oauth/oauth.module";
 import { McpController } from "./mcp.controller";
 import { McpService } from "./mcp.service";
@@ -25,6 +26,7 @@ import { McpAccessLogMiddleware } from "./mcp-access-log.middleware";
     TimelineModule,
     TagsModule,
     SearchModule,
+    StyleGuideModule,
     OAuthModule,
   ],
   controllers: [McpController],
