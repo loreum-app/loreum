@@ -620,6 +620,7 @@ export class StoryboardService {
         title: dto.title,
         description: dto.description,
         content: dto.content,
+        styleNotes: dto.styleNotes,
         plotlineId,
         locationId,
         timelineEventId: dto.timelineEventId,
@@ -725,6 +726,7 @@ export class StoryboardService {
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.content !== undefined) data.content = dto.content;
+    if (dto.styleNotes !== undefined) data.styleNotes = dto.styleNotes;
     if (dto.sequenceNumber !== undefined)
       data.sequenceNumber = dto.sequenceNumber;
     if (dto.timelineEventId !== undefined)

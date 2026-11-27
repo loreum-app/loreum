@@ -5,6 +5,7 @@ export interface CharacterFields {
   species?: string;
   age?: string;
   role?: string;
+  voiceNotes?: string;
 }
 
 export interface LocationFields {

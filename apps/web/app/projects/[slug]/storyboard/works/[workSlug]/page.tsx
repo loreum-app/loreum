@@ -42,6 +42,7 @@ interface Scene {
   plotline: { id: string; name: string; slug: string } | null;
   characters: SceneCharacter[];
   location: { id: string; name: string; slug: string } | null;
+  styleNotes: string | null;
 }
 
 interface Chapter {
@@ -119,6 +120,7 @@ export default function WorkDetailPage() {
   const [newScenePlotlineSlug, setNewScenePlotlineSlug] = useState("");
   const [newScenePovSlug, setNewScenePovSlug] = useState("");
   const [newSceneLocationSlug, setNewSceneLocationSlug] = useState("");
+  const [newSceneStyleNotes, setNewSceneStyleNotes] = useState("");
 
   // Scene editing
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
@@ -127,6 +129,7 @@ export default function WorkDetailPage() {
   const [editScenePlotlineSlug, setEditScenePlotlineSlug] = useState("");
   const [editScenePovSlug, setEditScenePovSlug] = useState("");
   const [editSceneLocationSlug, setEditSceneLocationSlug] = useState("");
+  const [editSceneStyleNotes, setEditSceneStyleNotes] = useState("");
 
   // Reference data
   const [entities, setEntities] = useState<EntityOption[]>([]);
@@ -297,8 +300,11 @@ export default function WorkDetailPage() {
     setEditSceneTitle(scene.title ?? "");
     setEditSceneDescription(scene.description ?? "");
     setEditScenePlotlineSlug(scene.plotline?.slug ?? "");
-    setEditScenePovSlug(scene.characters?.find((c) => c.isPov)?.entity.slug ?? "");
+    setEditScenePovSlug(
+      scene.characters?.find((c) => c.isPov)?.entity.slug ?? "",
+    );
     setEditSceneLocationSlug(scene.location?.slug ?? "");
+    setEditSceneStyleNotes(scene.styleNotes ?? "");
   };
 
   const handleSaveScene = async (chapterId: string, sceneId: string) => {
@@ -313,6 +319,7 @@ export default function WorkDetailPage() {
             plotlineSlug: editScenePlotlineSlug || null,
             povCharacterSlug: editScenePovSlug || null,
             locationSlug: editSceneLocationSlug || null,
+            styleNotes: editSceneStyleNotes.trim() || null,
           }),
         },
       );
@@ -357,6 +364,7 @@ export default function WorkDetailPage() {
     setNewScenePlotlineSlug("");
     setNewScenePovSlug("");
     setNewSceneLocationSlug("");
+    setNewSceneStyleNotes("");
   };
 
   const handleAddScene = async (chapterId: string) => {
@@ -373,6 +381,7 @@ export default function WorkDetailPage() {
             plotlineSlug: newScenePlotlineSlug || undefined,
             povCharacterSlug: newScenePovSlug || undefined,
             locationSlug: newSceneLocationSlug || undefined,
+            styleNotes: newSceneStyleNotes.trim() || undefined,
             sequenceNumber: scenes.length + 1,
           }),
         },
@@ -748,6 +757,19 @@ export default function WorkDetailPage() {
                                         />
                                       </div>
                                     </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">
+                                        Style Notes
+                                      </Label>
+                                      <Textarea
+                                        value={editSceneStyleNotes}
+                                        onChange={(e) =>
+                                          setEditSceneStyleNotes(e.target.value)
+                                        }
+                                        rows={2}
+                                        placeholder="Scene-specific style guidance..."
+                                      />
+                                    </div>
                                     <div className="flex gap-2">
                                       <Button
                                         size="sm"
@@ -791,16 +813,20 @@ export default function WorkDetailPage() {
                                             {scene.plotline.name}
                                           </Link>
                                         )}
-                                        {scene.characters?.filter((c) => c.isPov).map((c) => (
-                                          <Link
-                                            key={c.entityId}
-                                            href={`/projects/${params.slug}/entities/characters/${c.entity.slug}`}
-                                            className="hover:underline"
-                                            onClick={(e) => e.stopPropagation()}
-                                          >
-                                            POV: {c.entity.name}
-                                          </Link>
-                                        ))}
+                                        {scene.characters
+                                          ?.filter((c) => c.isPov)
+                                          .map((c) => (
+                                            <Link
+                                              key={c.entityId}
+                                              href={`/projects/${params.slug}/entities/characters/${c.entity.slug}`}
+                                              className="hover:underline"
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                            >
+                                              POV: {c.entity.name}
+                                            </Link>
+                                          ))}
                                         {scene.location && (
                                           <Link
                                             href={`/projects/${params.slug}/entities/locations/${scene.location.slug}`}
@@ -907,6 +933,17 @@ export default function WorkDetailPage() {
                                       searchPlaceholder="Search locations..."
                                     />
                                   </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Style Notes</Label>
+                                  <Textarea
+                                    value={newSceneStyleNotes}
+                                    onChange={(e) =>
+                                      setNewSceneStyleNotes(e.target.value)
+                                    }
+                                    placeholder="Scene-specific style guidance..."
+                                    rows={2}
+                                  />
                                 </div>
                                 <div className="flex gap-2">
                                   <Button

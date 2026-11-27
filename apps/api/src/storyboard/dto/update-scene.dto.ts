@@ -41,4 +41,9 @@ export class UpdateSceneDto {
   @IsOptional()
   @IsString()
   timelineEventId?: string | null;
+
+  @ApiPropertyOptional({ description: "Scene-specific style notes" })
+  @IsOptional()
+  @IsString()
+  styleNotes?: string | null;
 }

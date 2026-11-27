@@ -45,4 +45,9 @@ export class CreateSceneDto implements CreateSceneRequest {
   @IsOptional()
   @IsString()
   timelineEventId?: string;
+
+  @ApiPropertyOptional({ description: "Scene-specific style notes" })
+  @IsOptional()
+  @IsString()
+  styleNotes?: string;
 }

@@ -107,10 +107,10 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 - [x] MCP tool: `get_style_guide` - read tool
 - [x] MCP tool: `update_style_guide` - write tool
 - [ ] Style guide wizard UI (step-by-step: dropdowns for POV/tense/voice/tone, text areas for rules/examples)
-- [ ] Style guide editor UI (full form view, accessible after wizard or directly)
+- [x] Style guide editor UI (full form view, accessible after wizard or directly)
 - [ ] Trigger wizard on project creation (optional) + accessible from style guide page any time
-- [ ] Scene create/edit form: add `styleNotes` textarea
-- [ ] Character create/edit form: add `voiceNotes` textarea
+- [x] Scene create/edit form: add `styleNotes` textarea
+- [x] Character create/edit form: add `voiceNotes` textarea
 
 ### Onboarding
 
