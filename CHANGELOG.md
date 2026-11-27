@@ -1,19 +1,45 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.4] - 2026-11-27
+
+### Audit ledger
+
+Every write operation — from the UI, MCP tools, and the REST API — now produces an append-only ledger entry recording the actor, operation, target, and before/after snapshots. The ledger is per-project and immutable: undo writes a compensating entry rather than deleting the original.
+
+- `AuditLedger` model with `operation` (CREATE, UPDATE, DELETE, UNDO), `targetModel`, `targetId`, actor tracking (`actorType` USER or MCP, `userId`, `mcpClientId`), and JSON `beforeData`/`afterData` snapshots.
+- All existing write paths (entities, entity types, relationships, lore, timeline events, eras, storyboard items, projects) updated to record ledger entries.
+- Undo endpoint `POST /projects/:slug/audit/:id/undo` applies the inverse operation and appends an UNDO entry pointing to the original.
+- History page at `/projects/[slug]/history` with operation and model filters, human-readable descriptions, and undo buttons.
+- Plan-gated retention: 30 days / 500 entries minimum on Free; unlimited on Pro.
+- MCP tools updated to pass audit context through `auditContextFromMcp(ctx)`.
+
+### Style guide
+
+A per-project style guide that AI tools and collaborators reference when writing prose.
+
+- `StyleGuide` model as a 1:1 extension on `Project` (POV, tense, voice, tone, pacing, dialogue rules, prose style, vocabulary, custom rules). `voiceNotes` added to Character; `styleNotes` added to Scene.
+- Service with upsert and audit ledger integration; controller at `GET/PUT /projects/:slug/style-guide` with validated DTO.
+- MCP tools: `get_style_guide` (read) and `update_style_guide` (write, idempotent) with zod validation and 5 000-character field limits.
+- Shared types: `UpdateStyleGuideRequest` in `@loreum/types`.
+- Editor page at `/projects/[slug]/style-guide` with POV and tense dropdowns (human-readable labels via `SelectValue` render function), seven freeform text fields, dirty tracking, and delta-only saves.
+- Sidebar link (BookOpen icon) between History and Settings.
+
+### Roadmap: change history replaces the review queue
+
+- The MCP review queue is dropped. Staging every AI write for approval made each agent session wait on a person. Writes keep applying directly, and **change history** logs every write so any single change can be reverted, or the whole world rolled back to a point in time after a preview.
+- Roadmap, product spec, TODO, MCP plan, user journeys, and site copy updated to match.
 
 ### Fixes
 
 - **Creating a custom entity type, or saving its name or description, failed with "Invalid request data".** The API build never regenerated the Prisma client, so a deploy that kept the previous client could not write the `description` column added in 0.2.2. `build` in `apps/api` now runs `prisma generate` first, and Turborepo caches the generated client with the build output. A query the client rejects is a server fault, so it now answers `500` instead of a `400` that blamed the caller's input.
+- **Entity relationship editing from an entity page** now opens in a dialog on the visible edge, and public wiki pages show items on public worlds.
+- **App shell**: the project workspace uses a proper layout shell, keeping the sidebar stable while content scrolls.
 
-**Operator:** rebuild the API (or run `pnpm --filter api db:generate`) and restart it. No migration is needed.
+### Deployment
 
-### Roadmap: change history replaces the review queue
-
-- The MCP review queue is dropped. Staging every AI write for approval made each agent session wait on a person. Writes keep applying directly, and **change history** will log every write, from people and AI alike, so any single change can be reverted, or the whole world rolled back to a point in time after a preview. History is kept for 30 days and never fewer than the newest 500 changes. Design: [docs/CHANGE_HISTORY.md](docs/CHANGE_HISTORY.md).
-- Roadmap, product spec, TODO, MCP plan, user journeys, and site copy (home, about, pricing, compare, docs, blog, what's new, nav) updated to match. The compare table no longer lists the review queue as a Loreum feature.
-- v0.5's entity versioning and activity feed are folded into change history.
-- The README no longer lists the style guide as shipped; it is in progress.
+- Migration `20261127120000_audit_ledger` adds the `audit_ledger` table. Additive and safe to apply online.
+- Migration `20261127182429_add_style_guide_and_voice_notes` adds the `style_guides` table and `voiceNotes`/`styleNotes` columns. Additive.
+- Rebuild the API (or run `pnpm --filter api db:generate`) and restart it after applying migrations.
 
 ## [0.2.3] - 2026-09-18
 
