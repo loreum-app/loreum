@@ -50,6 +50,7 @@ import {
   X,
   Settings,
   History,
+  BookOpen,
   MoreHorizontal,
   PackageOpen,
   Pencil,
@@ -382,6 +383,20 @@ export function ProjectSidebar({
             >
               <History className="h-4 w-4" />
               History
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={isActive("style-guide")}
+              render={
+                <Link
+                  href={`${basePath}/style-guide`}
+                  onClick={handleNavClick}
+                />
+              }
+            >
+              <BookOpen className="h-4 w-4" />
+              Style Guide
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
