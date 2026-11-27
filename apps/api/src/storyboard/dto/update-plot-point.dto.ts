@@ -1,5 +1,5 @@
-import { IsString, IsOptional, IsInt } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, IsInt } from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class UpdatePlotPointDto {
   @ApiPropertyOptional()
@@ -36,4 +36,9 @@ export class UpdatePlotPointDto {
   @IsOptional()
   @IsString()
   entitySlug?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  locationSlug?: string | null;
 }
