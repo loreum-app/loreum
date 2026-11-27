@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt } from "class-validator";
+import { IsString, IsOptional, IsInt, IsArray } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import type { CreatePlotPointRequest } from "@loreum/types";
 
@@ -31,10 +31,11 @@ export class CreatePlotPointDto implements CreatePlotPointRequest {
   @IsString()
   timelineEventId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: "Entity slugs for this beat" })
   @IsOptional()
-  @IsString()
-  entitySlug?: string;
+  @IsArray()
+  @IsString({ each: true })
+  entitySlugs?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()

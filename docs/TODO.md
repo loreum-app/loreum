@@ -49,7 +49,7 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 
 ### Global Design & Polish
 
-- [ ] Global design pass - typography, spacing, color consistency
+- [x] Global design pass - shared Breadcrumb component, standardized spacing (py-8, max-w-4xl) across all detail pages
 - [ ] Responsive polish (mobile nav, sidebar behavior)
 - [ ] Screenshot/GIF in README (after UX pass)
 - [ ] Smoke test: login > create project > create entity > view graph > storyboard flow
@@ -61,7 +61,7 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 - [x] Scenes: multi-character picker (SceneCharacter join table exists, no UI)
 - [x] Scenes: timeline event link in create/edit forms
 - [x] Plot points: location picker (uses existing `locationId` FK)
-- [ ] Plot points: multi-entity support via join table (currently single entity + single location)
+- [x] Plot points: multi-entity support via join table (PlotPointEntity, chip+combobox picker)
 
 #### Entities
 
@@ -72,7 +72,8 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 #### Lore
 
 - [x] Add connected entities from the lore article UI
-- [ ] What other metadata does lore need? (hierarchy, backlinks, etc.)
+- [x] Lore article hierarchy (parentArticleId self-referential FK, parent picker, child articles section, cycle detection)
+- [ ] Wiki-style backlinks (depends on `[[entity]]` linking in Phase 1)
 
 #### Architecture
 

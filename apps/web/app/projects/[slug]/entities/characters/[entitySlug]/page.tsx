@@ -23,6 +23,7 @@ import {
   mergeRelationships,
 } from "../../_components/entity-sections";
 import { HistorySection } from "@/components/history-section";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { Pencil, Save, X, Trash2 } from "lucide-react";
 
 interface EntityHub {
@@ -226,10 +227,22 @@ export default function CharacterDetailPage() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      <Breadcrumb
+        items={[
+          {
+            label: "Entities",
+            href: `/projects/${params.slug}/entities/characters`,
+          },
+          {
+            label: "Characters",
+            href: `/projects/${params.slug}/entities/characters`,
+          },
+          { label: entity.name },
+        ]}
+      />
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-muted-foreground">Character</span>
           <div className="flex gap-2">
             {editing ? (
               <>

@@ -21,7 +21,11 @@ import { UpdateSceneDto } from "./dto/update-scene.dto";
 const plotPointInclude = {
   scene: { select: { id: true, title: true } },
   timelineEvent: { select: { id: true, name: true, date: true } },
-  entity: { select: { id: true, name: true, slug: true, type: true } },
+  entities: {
+    include: {
+      entity: { select: { id: true, name: true, slug: true, type: true } },
+    },
+  },
   location: { select: { id: true, name: true, slug: true, type: true } },
 };
 
@@ -226,20 +230,21 @@ export class StoryboardService {
       dto.timelineEventId,
     );
 
-    let entityId: string | undefined;
-    if (dto.entitySlug) {
-      const entity = await this.prisma.entity.findFirst({
-        where: { projectId, slug: dto.entitySlug },
-      });
-      if (entity) entityId = entity.id;
-    }
-
     let locationId: string | undefined;
     if (dto.locationSlug) {
       const location = await this.prisma.entity.findFirst({
         where: { projectId, slug: dto.locationSlug },
       });
       if (location) locationId = location.id;
+    }
+
+    const entityIds: string[] = [];
+    if (dto.entitySlugs?.length) {
+      const found = await this.prisma.entity.findMany({
+        where: { projectId, slug: { in: dto.entitySlugs } },
+        select: { id: true },
+      });
+      entityIds.push(...found.map((e) => e.id));
     }
 
     const created = await this.prisma.plotPoint.create({
@@ -251,8 +256,10 @@ export class StoryboardService {
         label: dto.label,
         sceneId: dto.sceneId,
         timelineEventId: dto.timelineEventId,
-        entityId,
         locationId,
+        entities: {
+          create: entityIds.map((entityId) => ({ entityId })),
+        },
       },
       include: plotPointInclude,
     });
@@ -300,14 +307,18 @@ export class StoryboardService {
     if (dto.timelineEventId !== undefined)
       data.timelineEventId = dto.timelineEventId;
 
-    if (dto.entitySlug !== undefined) {
-      if (dto.entitySlug === null) {
-        data.entityId = null;
-      } else {
-        const entity = await this.prisma.entity.findFirst({
-          where: { projectId, slug: dto.entitySlug },
+    if (dto.entitySlugs !== undefined) {
+      await this.prisma.plotPointEntity.deleteMany({
+        where: { plotPointId: id },
+      });
+      if (dto.entitySlugs.length > 0) {
+        const found = await this.prisma.entity.findMany({
+          where: { projectId, slug: { in: dto.entitySlugs } },
+          select: { id: true },
         });
-        data.entityId = entity?.id ?? null;
+        await this.prisma.plotPointEntity.createMany({
+          data: found.map((e) => ({ plotPointId: id, entityId: e.id })),
+        });
       }
     }
 

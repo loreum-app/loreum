@@ -126,7 +126,11 @@ export function registerStoryboardTools(
           .describe("Structural label, e.g. 'inciting incident', 'midpoint'"),
         sceneId: z.string().optional(),
         timelineEventId: z.string().optional(),
-        entitySlug: z.string().optional().describe("Focal entity of this beat"),
+        entitySlugs: z
+          .array(z.string())
+          .max(50)
+          .optional()
+          .describe("Entity slugs involved in this beat"),
       }),
     },
     async ({ plotlineSlug, ...dto }) =>
@@ -143,7 +147,7 @@ export function registerStoryboardTools(
     {
       title: "Update plot point",
       description:
-        "Partially update a plot point. Pass null for sceneId/timelineEventId/entitySlug to unlink.",
+        "Partially update a plot point. Pass null for sceneId/timelineEventId to unlink.",
       access: "write",
       idempotent: true,
       input: z.object({
@@ -154,7 +158,11 @@ export function registerStoryboardTools(
         sequenceNumber: z.number().int().min(0).optional(),
         sceneId: z.string().nullable().optional(),
         timelineEventId: z.string().nullable().optional(),
-        entitySlug: z.string().nullable().optional(),
+        entitySlugs: z
+          .array(z.string())
+          .max(50)
+          .optional()
+          .describe("Replaces the entity set when provided"),
       }),
     },
     async ({ plotPointId, ...dto }) =>

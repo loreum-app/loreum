@@ -583,7 +583,7 @@ describe("MCP endpoint (integration)", () => {
         title: "Inciting incident",
         sequenceNumber: 1,
         sceneId: scene.data.id,
-        entitySlug: "frodo",
+        entitySlugs: ["frodo"],
       });
       expect(point.ok, point.text).toBe(true);
 

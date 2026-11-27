@@ -4,6 +4,7 @@ export interface CreateLoreArticleRequest {
   category?: string;
   tags?: string[];
   entitySlugs?: string[];
+  parentArticleSlug?: string | null;
 }
 
 export interface UpdateLoreArticleRequest {
@@ -12,6 +13,7 @@ export interface UpdateLoreArticleRequest {
   category?: string;
   tags?: string[];
   entitySlugs?: string[];
+  parentArticleSlug?: string | null;
 }
 
 export interface LoreFilterParams {

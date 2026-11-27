@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt } from "class-validator";
+import { IsString, IsOptional, IsInt, IsArray } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class UpdatePlotPointDto {
@@ -32,10 +32,11 @@ export class UpdatePlotPointDto {
   @IsString()
   timelineEventId?: string | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: "Entity slugs for this beat" })
   @IsOptional()
-  @IsString()
-  entitySlug?: string | null;
+  @IsArray()
+  @IsString({ each: true })
+  entitySlugs?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()

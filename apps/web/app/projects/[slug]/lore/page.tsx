@@ -75,9 +75,17 @@ export default function LorePage() {
               <Card className="transition-colors hover:border-foreground/20">
                 <CardHeader>
                   <CardTitle className="text-base">{article.title}</CardTitle>
-                  {article.category && (
-                    <CardDescription>{article.category}</CardDescription>
-                  )}
+                  <CardDescription>
+                    {article.parentArticle && (
+                      <span className="text-xs">
+                        in {article.parentArticle.title}
+                      </span>
+                    )}
+                    {article.parentArticle && article.category && " · "}
+                    {article.category && (
+                      <span className="text-xs">{article.category}</span>
+                    )}
+                  </CardDescription>
                 </CardHeader>
               </Card>
             </Link>

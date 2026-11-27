@@ -12,6 +12,9 @@ import { Card, CardContent } from "@loreum/ui/card";
 import { Markdown } from "@/components/markdown";
 import { Combobox } from "@loreum/ui/combobox";
 import { HistorySection } from "@/components/history-section";
+import { Breadcrumb } from "@/components/breadcrumb";
+import Link from "next/link";
+import type { LoreArticleRef } from "@loreum/types";
 import { Pencil, Trash2, Save, X, Plus } from "lucide-react";
 
 export default function LoreArticlePage() {
@@ -25,6 +28,9 @@ export default function LoreArticlePage() {
   const [category, setCategory] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [editParentSlug, setEditParentSlug] = useState("");
+  const [allArticles, setAllArticles] = useState<LoreArticleRef[]>([]);
 
   const [editingEntities, setEditingEntities] = useState(false);
   const [selectedEntitySlugs, setSelectedEntitySlugs] = useState<string[]>([]);
@@ -40,6 +46,7 @@ export default function LoreArticlePage() {
         setTitle(a.title);
         setContent(a.content);
         setCategory(a.category ?? "");
+        setEditParentSlug(a.parentArticle?.slug ?? "");
       })
       .catch(() => setArticle(null))
       .finally(() => setLoading(false));
@@ -50,6 +57,12 @@ export default function LoreArticlePage() {
       `/projects/${params.slug}/entities`,
     )
       .then(setAllEntities)
+      .catch(() => {});
+  }, [params.slug]);
+
+  useEffect(() => {
+    api<LoreArticleRef[]>(`/projects/${params.slug}/lore`)
+      .then(setAllArticles)
       .catch(() => {});
   }, [params.slug]);
 
@@ -95,6 +108,7 @@ export default function LoreArticlePage() {
             title: title.trim(),
             content: content.trim(),
             category: category.trim() || null,
+            parentArticleSlug: editParentSlug || null,
           }),
         },
       );
@@ -128,6 +142,7 @@ export default function LoreArticlePage() {
       setTitle(article.title);
       setContent(article.content);
       setCategory(article.category ?? "");
+      setEditParentSlug(article.parentArticle?.slug ?? "");
     }
     setEditing(false);
   };
@@ -149,7 +164,21 @@ export default function LoreArticlePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      <Breadcrumb
+        items={[
+          { label: "Lore", href: `/projects/${params.slug}/lore` },
+          ...(article.parentArticle
+            ? [
+                {
+                  label: article.parentArticle.title,
+                  href: `/projects/${params.slug}/lore/${article.parentArticle.slug}`,
+                },
+              ]
+            : []),
+          { label: article.title },
+        ]}
+      />
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -170,6 +199,28 @@ export default function LoreArticlePage() {
                   placeholder="e.g. artifacts, history..."
                   className="w-48"
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground">Parent:</Label>
+                <Combobox
+                  options={allArticles
+                    .filter((a) => a.slug !== params.loreSlug)
+                    .map((a) => ({ value: a.slug, label: a.title }))}
+                  value={editParentSlug}
+                  onValueChange={(slug) => setEditParentSlug(slug ?? "")}
+                  placeholder="None (top-level)"
+                  searchPlaceholder="Search articles..."
+                />
+                {editParentSlug && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-1.5"
+                    onClick={() => setEditParentSlug("")}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -228,6 +279,24 @@ export default function LoreArticlePage() {
             <Markdown>{article.content}</Markdown>
           </CardContent>
         </Card>
+      )}
+
+      {/* Child Articles */}
+      {article.childArticles && article.childArticles.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 text-sm text-muted-foreground">Sub-articles</h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {article.childArticles.map((child) => (
+              <Link
+                key={child.id}
+                href={`/projects/${params.slug}/lore/${child.slug}`}
+                className="rounded-lg border px-3 py-2 text-sm hover:border-foreground/20 transition-colors"
+              >
+                {child.title}
+              </Link>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Tags */}
@@ -350,7 +419,9 @@ export default function LoreArticlePage() {
             )}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">No connected entities</p>
+          <p className="text-sm text-muted-foreground">
+            No connected entities.
+          </p>
         )}
       </div>
 

@@ -29,4 +29,9 @@ export class CreateLoreArticleDto implements CreateLoreArticleRequest {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  parentArticleSlug?: string | null;
 }

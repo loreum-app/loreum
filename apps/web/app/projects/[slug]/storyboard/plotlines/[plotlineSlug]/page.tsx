@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@loreum/ui/select";
 import { Combobox } from "@loreum/ui/combobox";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { Pencil, Save, X, Trash2, Plus } from "lucide-react";
 
 interface PlotPoint {
@@ -27,7 +28,9 @@ interface PlotPoint {
   label: string | null;
   scene: { id: string; title: string | null } | null;
   timelineEvent: { id: string; name: string; date: string } | null;
-  entity: { id: string; name: string; slug: string; type: string } | null;
+  entities: {
+    entity: { id: string; name: string; slug: string; type: string };
+  }[];
   location: { id: string; name: string; slug: string; type: string } | null;
 }
 
@@ -87,7 +90,7 @@ export default function PlotlineDetailPage() {
   const [newPointTitle, setNewPointTitle] = useState("");
   const [newPointDescription, setNewPointDescription] = useState("");
   const [newPointLabel, setNewPointLabel] = useState("");
-  const [newPointEntitySlug, setNewPointEntitySlug] = useState("");
+  const [newPointEntitySlugs, setNewPointEntitySlugs] = useState<string[]>([]);
   const [newPointLocationSlug, setNewPointLocationSlug] = useState("");
   const [newPointTimelineEventId, setNewPointTimelineEventId] = useState("");
   const [creatingPoint, setCreatingPoint] = useState(false);
@@ -97,7 +100,9 @@ export default function PlotlineDetailPage() {
   const [editPointTitle, setEditPointTitle] = useState("");
   const [editPointDescription, setEditPointDescription] = useState("");
   const [editPointLabel, setEditPointLabel] = useState("");
-  const [editPointEntitySlug, setEditPointEntitySlug] = useState("");
+  const [editPointEntitySlugs, setEditPointEntitySlugs] = useState<string[]>(
+    [],
+  );
   const [editPointLocationSlug, setEditPointLocationSlug] = useState("");
   const [editPointTimelineEventId, setEditPointTimelineEventId] = useState("");
 
@@ -192,7 +197,8 @@ export default function PlotlineDetailPage() {
             title: newPointTitle.trim(),
             description: newPointDescription.trim() || undefined,
             label: newPointLabel || undefined,
-            entitySlug: newPointEntitySlug || undefined,
+            entitySlugs:
+              newPointEntitySlugs.length > 0 ? newPointEntitySlugs : undefined,
             locationSlug: newPointLocationSlug || undefined,
             timelineEventId: newPointTimelineEventId || undefined,
             sequenceNumber: plotline.plotPoints.length + 1,
@@ -206,7 +212,7 @@ export default function PlotlineDetailPage() {
       setNewPointTitle("");
       setNewPointDescription("");
       setNewPointLabel("");
-      setNewPointEntitySlug("");
+      setNewPointEntitySlugs([]);
       setNewPointLocationSlug("");
       setNewPointTimelineEventId("");
       setAddingPoint(false);
@@ -222,7 +228,7 @@ export default function PlotlineDetailPage() {
     setEditPointTitle(point.title);
     setEditPointDescription(point.description ?? "");
     setEditPointLabel(point.label ?? "");
-    setEditPointEntitySlug(point.entity?.slug ?? "");
+    setEditPointEntitySlugs(point.entities.map((pe) => pe.entity.slug));
     setEditPointLocationSlug(point.location?.slug ?? "");
     setEditPointTimelineEventId(point.timelineEvent?.id ?? "");
   };
@@ -238,7 +244,7 @@ export default function PlotlineDetailPage() {
             title: editPointTitle.trim(),
             description: editPointDescription.trim() || null,
             label: editPointLabel || null,
-            entitySlug: editPointEntitySlug || null,
+            entitySlugs: editPointEntitySlugs,
             locationSlug: editPointLocationSlug || null,
             timelineEventId: editPointTimelineEventId || null,
           }),
@@ -288,7 +294,14 @@ export default function PlotlineDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      <Breadcrumb
+        items={[
+          { label: "Storyboard", href: `/projects/${params.slug}/storyboard` },
+          { label: "Plotlines", href: `/projects/${params.slug}/storyboard` },
+          { label: plotline.name },
+        ]}
+      />
       {/* Header */}
       <div className="mb-8">
         <div className="mb-4 flex items-center justify-between">
@@ -458,17 +471,48 @@ export default function PlotlineDetailPage() {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Entity</Label>
-                        <Combobox
-                          options={entities.map((e) => ({
-                            value: e.slug,
-                            label: e.name,
-                          }))}
-                          value={editPointEntitySlug}
-                          onValueChange={setEditPointEntitySlug}
-                          placeholder="Link an entity..."
-                          searchPlaceholder="Search entities..."
-                        />
+                        <Label className="text-xs">Entities</Label>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {editPointEntitySlugs.map((slug) => {
+                            const ent = entities.find((e) => e.slug === slug);
+                            return (
+                              <span
+                                key={slug}
+                                className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+                              >
+                                {ent?.name ?? slug}
+                                <button
+                                  type="button"
+                                  className="ml-0.5 text-muted-foreground hover:text-foreground"
+                                  onClick={() =>
+                                    setEditPointEntitySlugs((prev) =>
+                                      prev.filter((s) => s !== slug),
+                                    )
+                                  }
+                                >
+                                  &times;
+                                </button>
+                              </span>
+                            );
+                          })}
+                          <Combobox
+                            options={entities
+                              .filter(
+                                (e) => !editPointEntitySlugs.includes(e.slug),
+                              )
+                              .map((e) => ({
+                                value: e.slug,
+                                label: e.name,
+                              }))}
+                            value=""
+                            onValueChange={(slug) =>
+                              slug &&
+                              setEditPointEntitySlugs((prev) => [...prev, slug])
+                            }
+                            placeholder="Add entity..."
+                            searchPlaceholder="Search entities..."
+                          />
+                        </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -541,14 +585,15 @@ export default function PlotlineDetailPage() {
                         </p>
                       )}
                       <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                        {point.entity && (
+                        {point.entities.map((pe) => (
                           <Link
-                            href={`/projects/${params.slug}/entities/${{ CHARACTER: "characters", LOCATION: "locations", ORGANIZATION: "organizations" }[point.entity.type] ?? point.entity.type.toLowerCase()}/${point.entity.slug}`}
+                            key={pe.entity.slug}
+                            href={`/projects/${params.slug}/entities/${{ CHARACTER: "characters", LOCATION: "locations", ORGANIZATION: "organizations" }[pe.entity.type] ?? pe.entity.type.toLowerCase()}/${pe.entity.slug}`}
                             className="hover:underline"
                           >
-                            {point.entity.name}
+                            {pe.entity.name}
                           </Link>
-                        )}
+                        ))}
                         {point.location && (
                           <Link
                             href={`/projects/${params.slug}/entities/locations/${point.location.slug}`}
@@ -628,17 +673,46 @@ export default function PlotlineDetailPage() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Entity</Label>
-                    <Combobox
-                      options={entities.map((e) => ({
-                        value: e.slug,
-                        label: e.name,
-                      }))}
-                      value={newPointEntitySlug}
-                      onValueChange={setNewPointEntitySlug}
-                      placeholder="Link an entity..."
-                      searchPlaceholder="Search entities..."
-                    />
+                    <Label className="text-xs">Entities</Label>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {newPointEntitySlugs.map((slug) => {
+                        const ent = entities.find((e) => e.slug === slug);
+                        return (
+                          <span
+                            key={slug}
+                            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+                          >
+                            {ent?.name ?? slug}
+                            <button
+                              type="button"
+                              className="ml-0.5 text-muted-foreground hover:text-foreground"
+                              onClick={() =>
+                                setNewPointEntitySlugs((prev) =>
+                                  prev.filter((s) => s !== slug),
+                                )
+                              }
+                            >
+                              &times;
+                            </button>
+                          </span>
+                        );
+                      })}
+                      <Combobox
+                        options={entities
+                          .filter((e) => !newPointEntitySlugs.includes(e.slug))
+                          .map((e) => ({
+                            value: e.slug,
+                            label: e.name,
+                          }))}
+                        value=""
+                        onValueChange={(slug) =>
+                          slug &&
+                          setNewPointEntitySlugs((prev) => [...prev, slug])
+                        }
+                        placeholder="Add entity..."
+                        searchPlaceholder="Search entities..."
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -686,7 +760,7 @@ export default function PlotlineDetailPage() {
                       setNewPointTitle("");
                       setNewPointDescription("");
                       setNewPointLabel("");
-                      setNewPointEntitySlug("");
+                      setNewPointEntitySlugs([]);
                       setNewPointLocationSlug("");
                       setNewPointTimelineEventId("");
                     }}

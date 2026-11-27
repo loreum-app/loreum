@@ -12,13 +12,18 @@ function shapeArticle<
       entity: { id: string; name: string; slug: string; type: string };
     }[];
     loreArticleTags?: { tag: { name: string } }[];
+    parentArticle?: { id: string; title: string; slug: string } | null;
+    childArticles?: { id: string; title: string; slug: string }[];
   },
 >(a: T) {
-  const { entities, loreArticleTags, ...rest } = a;
+  const { entities, loreArticleTags, parentArticle, childArticles, ...rest } =
+    a;
   return {
     ...rest,
     entities: entities?.map((e) => e.entity) ?? [],
     tags: loreArticleTags?.map((t) => t.tag.name) ?? [],
+    parentArticle: parentArticle ?? null,
+    childArticles: childArticles ?? [],
   };
 }
 
@@ -80,6 +85,10 @@ export function registerLoreTools(
           .optional()
           .describe("Slugs of entities this article is about"),
         tags: z.array(z.string().min(1).max(50)).max(50).optional(),
+        parentArticleSlug: z
+          .string()
+          .optional()
+          .describe("Parent article slug for hierarchy"),
       }),
     },
     async (input) =>
@@ -107,6 +116,11 @@ export function registerLoreTools(
         category: z.string().max(100).optional(),
         entitySlugs: z.array(z.string()).max(100).optional(),
         tags: z.array(z.string().min(1).max(50)).max(50).optional(),
+        parentArticleSlug: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Parent article slug; null to unset"),
       }),
     },
     async ({ articleSlug, ...updates }) =>
