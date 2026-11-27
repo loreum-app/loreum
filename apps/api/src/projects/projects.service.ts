@@ -5,6 +5,8 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { EntitlementsService } from "../billing/entitlements.service";
+import { AuditLedgerService } from "../audit/audit-ledger.service";
+import { AuditContext } from "../audit/audit.types";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
 import { slugify } from "../common/utils/slug";
@@ -51,9 +53,10 @@ export class ProjectsService {
   constructor(
     private prisma: PrismaService,
     private entitlements: EntitlementsService,
+    private auditLedger: AuditLedgerService,
   ) {}
 
-  async create(userId: string, dto: CreateProjectDto) {
+  async create(userId: string, dto: CreateProjectDto, audit?: AuditContext) {
     const { maxProjects } = await this.entitlements.limits(userId);
     if (maxProjects !== null) {
       const count = await this.prisma.project.count({
@@ -68,7 +71,7 @@ export class ProjectsService {
 
     const slug = await this.generateUniqueSlug(dto.name);
 
-    return this.prisma.project.create({
+    const created = await this.prisma.project.create({
       data: {
         name: dto.name,
         slug,
@@ -77,6 +80,19 @@ export class ProjectsService {
         ownerId: userId,
       },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId: created.id,
+        operation: "CREATE",
+        targetModel: "Project",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
   /**
@@ -163,8 +179,14 @@ export class ProjectsService {
     return project;
   }
 
-  async update(slug: string, userId: string, dto: UpdateProjectDto) {
+  async update(
+    slug: string,
+    userId: string,
+    dto: UpdateProjectDto,
+    audit?: AuditContext,
+  ) {
     const project = await this.findBySlug(slug, userId);
+    const beforeSnapshot = audit ? this.snapshot(project) : undefined;
 
     const data: Record<string, unknown> = {};
     if (dto.description !== undefined)
@@ -176,10 +198,24 @@ export class ProjectsService {
       data.slug = await this.generateUniqueSlug(dto.name, project.id);
     }
 
-    return this.prisma.project.update({
+    const updated = await this.prisma.project.update({
       where: { id: project.id },
       data,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId: updated.id,
+        operation: "UPDATE",
+        targetModel: "Project",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
   async delete(slug: string, userId: string) {
@@ -200,9 +236,20 @@ export class ProjectsService {
       timelineLabelPrefix?: string;
       timelineLabelSuffix?: string;
     },
+    audit?: AuditContext,
   ) {
     const project = await this.findBySlug(slug, userId);
-    return this.prisma.project.update({
+    const beforeSnapshot = audit
+      ? {
+          timelineMode: project.timelineMode,
+          timelineStart: project.timelineStart,
+          timelineEnd: project.timelineEnd,
+          timelineLabelPrefix: project.timelineLabelPrefix,
+          timelineLabelSuffix: project.timelineLabelSuffix,
+        }
+      : undefined;
+
+    const updated = await this.prisma.project.update({
       where: { id: project.id },
       data: {
         ...(config.timelineMode !== undefined && {
@@ -221,6 +268,20 @@ export class ProjectsService {
         timelineLabelSuffix: true,
       },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId: project.id,
+        operation: "UPDATE",
+        targetModel: "Project",
+        targetId: project.id,
+        beforeData: beforeSnapshot,
+        afterData: updated,
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
   async patchGraphLayout(
@@ -235,6 +296,13 @@ export class ProjectsService {
       WHERE id = ${project.id}
     `;
     return patch; // $executeRaw returns an affected row count, not the updated record, which is why we return patch directly instead of the updated project.
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic snapshot for JSON column
+  private snapshot(record: any): object {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally stripping internal fields
+    const { ownerId, graphLayout, createdAt, updatedAt, ...rest } = record;
+    return rest;
   }
 
   private assertOwner(ownerId: string, userId: string) {

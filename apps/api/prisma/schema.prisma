@@ -167,7 +167,7 @@ model Project {
 
   // MCP
   apiKeys        ApiKey[]
-  pendingChanges PendingChange[]
+  ledgerEntries  LedgerEntry[]
   mcpConnections McpConnection[]
   oauthCodes     OAuthAuthorizationCode[]
 
@@ -623,7 +623,7 @@ model Map {
 }
 
 // ============================================================================
-// MCP AUTH & REVIEW QUEUE
+// MCP AUTH & AUDIT LEDGER
 // ============================================================================
 
 enum ApiKeyPermission {
@@ -631,16 +631,11 @@ enum ApiKeyPermission {
   READ_WRITE
 }
 
-enum ChangeOperation {
+enum LedgerOperation {
   CREATE
   UPDATE
   DELETE
-}
-
-enum ChangeStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
+  UNDO
 }
 
 model ApiKey {
@@ -655,33 +650,39 @@ model ApiKey {
   revokedAt   DateTime?
   createdAt   DateTime         @default(now())
 
-  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  pendingChanges PendingChange[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@map("api_keys")
 }
 
-model PendingChange {
-  id           String          @id @default(cuid())
-  projectId    String
-  apiKeyId     String?
-  batchId      String
-  operation    ChangeOperation
-  targetModel  String
-  targetId     String?
-  proposedData Json            @default("{}")
-  previousData Json?
-  status       ChangeStatus    @default(PENDING)
-  reviewedAt   DateTime?
-  createdAt    DateTime        @default(now())
+model LedgerEntry {
+  id        String   @id @default(cuid())
+  projectId String
+  createdAt DateTime @default(now())
+
+  operation   LedgerOperation
+  targetModel String
+  targetId    String
+  beforeData  Json?
+  afterData   Json?
+
+  undoneByEntryId String?
+  undoOfEntryId   String?
+
+  undoneByEntry LedgerEntry?  @relation("UndoLink", fields: [undoneByEntryId], references: [id])
+  undoTargets   LedgerEntry[] @relation("UndoLink")
+
+  actorType  String
+  actorId    String
+  actorLabel String?
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  apiKey  ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
 
-  @@index([projectId, status])
-  @@index([batchId])
-  @@map("pending_changes")
+  @@index([projectId, createdAt])
+  @@index([projectId, targetModel, targetId])
+  @@index([undoneByEntryId])
+  @@map("ledger_entries")
 }
 
 // ============================================================================

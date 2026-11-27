@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { AuditLedgerService } from "../audit/audit-ledger.service";
+import { AuditContext } from "../audit/audit.types";
 import { generateUniqueSlug } from "../common/utils/slug";
 import {
   assertSceneInProject,
@@ -24,7 +26,10 @@ const plotPointInclude = {
 
 @Injectable()
 export class StoryboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditLedger: AuditLedgerService,
+  ) {}
 
   // ── Overview ──
 
@@ -60,7 +65,11 @@ export class StoryboardService {
 
   // ── Plotlines ──
 
-  async createPlotline(projectId: string, dto: CreatePlotlineDto) {
+  async createPlotline(
+    projectId: string,
+    dto: CreatePlotlineDto,
+    audit?: AuditContext,
+  ) {
     const slug = await generateUniqueSlug(
       this.prisma,
       "plotline",
@@ -77,7 +86,7 @@ export class StoryboardService {
       parentPlotlineId = parent.id;
     }
 
-    return this.prisma.plotline.create({
+    const created = await this.prisma.plotline.create({
       data: {
         projectId,
         name: dto.name,
@@ -88,6 +97,19 @@ export class StoryboardService {
       },
       include: { childPlotlines: true },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "Plotline",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
   async findAllPlotlines(projectId: string) {
@@ -121,8 +143,10 @@ export class StoryboardService {
     projectId: string,
     slug: string,
     dto: UpdatePlotlineDto,
+    audit?: AuditContext,
   ) {
     const plotline = await this.findPlotlineBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(plotline) : undefined;
 
     let newSlug = slug;
     if (dto.name && dto.name !== plotline.name) {
@@ -134,7 +158,7 @@ export class StoryboardService {
       );
     }
 
-    return this.prisma.plotline.update({
+    const updated = await this.prisma.plotline.update({
       where: { id: plotline.id },
       data: {
         ...(dto.name !== undefined && { name: dto.name, slug: newSlug }),
@@ -151,11 +175,38 @@ export class StoryboardService {
         },
       },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "Plotline",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
-  async deletePlotline(projectId: string, slug: string) {
+  async deletePlotline(projectId: string, slug: string, audit?: AuditContext) {
     const plotline = await this.findPlotlineBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(plotline) : undefined;
+
     await this.prisma.plotline.delete({ where: { id: plotline.id } });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "Plotline",
+        targetId: plotline.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
   }
 
   // ── Plot Points ──
@@ -164,6 +215,7 @@ export class StoryboardService {
     projectId: string,
     plotlineSlug: string,
     dto: CreatePlotPointDto,
+    audit?: AuditContext,
   ) {
     const plotline = await this.findPlotlineBySlug(projectId, plotlineSlug);
     await assertSceneInProject(this.prisma, projectId, dto.sceneId);
@@ -181,7 +233,7 @@ export class StoryboardService {
       if (entity) entityId = entity.id;
     }
 
-    return this.prisma.plotPoint.create({
+    const created = await this.prisma.plotPoint.create({
       data: {
         plotlineId: plotline.id,
         sequenceNumber: dto.sequenceNumber,
@@ -194,17 +246,33 @@ export class StoryboardService {
       },
       include: plotPointInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "PlotPoint",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
   async updatePlotPoint(
     projectId: string,
     id: string,
     dto: UpdatePlotPointDto,
+    audit?: AuditContext,
   ) {
     const point = await this.prisma.plotPoint.findFirst({
       where: { id, plotline: { projectId } },
+      include: plotPointInclude,
     });
     if (!point) throw new NotFoundException("Plot point not found");
+    const beforeSnapshot = audit ? this.snapshot(point) : undefined;
     await assertSceneInProject(this.prisma, projectId, dto.sceneId);
     await assertTimelineEventInProject(
       this.prisma,
@@ -233,24 +301,56 @@ export class StoryboardService {
       }
     }
 
-    return this.prisma.plotPoint.update({
+    const updated = await this.prisma.plotPoint.update({
       where: { id },
       data,
       include: plotPointInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "PlotPoint",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
-  async deletePlotPoint(projectId: string, id: string) {
+  async deletePlotPoint(projectId: string, id: string, audit?: AuditContext) {
     const point = await this.prisma.plotPoint.findFirst({
       where: { id, plotline: { projectId } },
+      include: plotPointInclude,
     });
     if (!point) throw new NotFoundException("Plot point not found");
+    const beforeSnapshot = audit ? this.snapshot(point) : undefined;
+
     await this.prisma.plotPoint.delete({ where: { id } });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "PlotPoint",
+        targetId: point.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
   }
 
   // ── Works ──
 
-  async createWork(projectId: string, dto: CreateWorkDto) {
+  async createWork(
+    projectId: string,
+    dto: CreateWorkDto,
+    audit?: AuditContext,
+  ) {
     const slug = await generateUniqueSlug(
       this.prisma,
       "work",
@@ -258,7 +358,7 @@ export class StoryboardService {
       projectId,
     );
 
-    return this.prisma.work.create({
+    const created = await this.prisma.work.create({
       data: {
         projectId,
         title: dto.title,
@@ -270,6 +370,19 @@ export class StoryboardService {
       },
       include: { chapters: { orderBy: { sequenceNumber: "asc" } } },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "Work",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
   async findAllWorks(projectId: string) {
@@ -298,8 +411,14 @@ export class StoryboardService {
     return work;
   }
 
-  async updateWork(projectId: string, slug: string, dto: UpdateWorkDto) {
+  async updateWork(
+    projectId: string,
+    slug: string,
+    dto: UpdateWorkDto,
+    audit?: AuditContext,
+  ) {
     const work = await this.findWorkBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(work) : undefined;
 
     let newSlug = slug;
     if (dto.title && dto.title !== work.title) {
@@ -311,7 +430,7 @@ export class StoryboardService {
       );
     }
 
-    return this.prisma.work.update({
+    const updated = await this.prisma.work.update({
       where: { id: work.id },
       data: {
         ...(dto.title !== undefined && { title: dto.title, slug: newSlug }),
@@ -325,11 +444,38 @@ export class StoryboardService {
         },
       },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "Work",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
-  async deleteWork(projectId: string, slug: string) {
+  async deleteWork(projectId: string, slug: string, audit?: AuditContext) {
     const work = await this.findWorkBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(work) : undefined;
+
     await this.prisma.work.delete({ where: { id: work.id } });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "Work",
+        targetId: work.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
   }
 
   // ── Chapters ──
@@ -338,10 +484,11 @@ export class StoryboardService {
     projectId: string,
     workSlug: string,
     dto: CreateChapterDto,
+    audit?: AuditContext,
   ) {
     const work = await this.findWorkBySlug(projectId, workSlug);
 
-    return this.prisma.chapter.create({
+    const created = await this.prisma.chapter.create({
       data: {
         workId: work.id,
         title: dto.title,
@@ -350,15 +497,34 @@ export class StoryboardService {
       },
       include: { _count: { select: { scenes: true } } },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "Chapter",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
-  async updateChapter(projectId: string, id: string, dto: UpdateChapterDto) {
+  async updateChapter(
+    projectId: string,
+    id: string,
+    dto: UpdateChapterDto,
+    audit?: AuditContext,
+  ) {
     const chapter = await this.prisma.chapter.findFirst({
       where: { id, work: { projectId } },
     });
     if (!chapter) throw new NotFoundException("Chapter not found");
+    const beforeSnapshot = audit ? this.snapshot(chapter) : undefined;
 
-    return this.prisma.chapter.update({
+    const updated = await this.prisma.chapter.update({
       where: { id },
       data: {
         ...(dto.title !== undefined && { title: dto.title }),
@@ -369,19 +535,50 @@ export class StoryboardService {
       },
       include: { _count: { select: { scenes: true } } },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "Chapter",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
-  async deleteChapter(projectId: string, id: string) {
+  async deleteChapter(projectId: string, id: string, audit?: AuditContext) {
     const chapter = await this.prisma.chapter.findFirst({
       where: { id, work: { projectId } },
     });
     if (!chapter) throw new NotFoundException("Chapter not found");
+    const beforeSnapshot = audit ? this.snapshot(chapter) : undefined;
+
     await this.prisma.chapter.delete({ where: { id } });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "Chapter",
+        targetId: chapter.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
   }
 
   // ── Scenes ──
 
-  async createScene(projectId: string, dto: CreateSceneDto) {
+  async createScene(
+    projectId: string,
+    dto: CreateSceneDto,
+    audit?: AuditContext,
+  ) {
     const chapter = await this.prisma.chapter.findFirst({
       where: { id: dto.chapterId, work: { projectId } },
     });
@@ -408,7 +605,6 @@ export class StoryboardService {
       if (loc) locationId = loc.id;
     }
 
-    // Resolve POV character slug to entity ID
     let povEntityId: string | undefined;
     if (dto.povCharacterSlug) {
       const pov = await this.prisma.entity.findFirst({
@@ -430,10 +626,20 @@ export class StoryboardService {
       },
     });
 
-    // Add POV character via the SceneCharacter join table
     if (povEntityId) {
       await this.prisma.sceneCharacter.create({
         data: { sceneId: scene.id, entityId: povEntityId, isPov: true },
+      });
+    }
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "Scene",
+        targetId: scene.id,
+        afterData: this.snapshot(scene),
+        actor: audit,
       });
     }
 
@@ -486,11 +692,29 @@ export class StoryboardService {
     });
   }
 
-  async updateScene(projectId: string, id: string, dto: UpdateSceneDto) {
+  async updateScene(
+    projectId: string,
+    id: string,
+    dto: UpdateSceneDto,
+    audit?: AuditContext,
+  ) {
     const scene = await this.prisma.scene.findFirst({
       where: { id, chapter: { work: { projectId } } },
+      include: {
+        plotline: { select: { id: true, name: true, slug: true } },
+        characters: {
+          select: {
+            entityId: true,
+            role: true,
+            isPov: true,
+            entity: { select: { id: true, name: true, slug: true } },
+          },
+        },
+        location: { select: { id: true, name: true, slug: true } },
+      },
     });
     if (!scene) throw new NotFoundException("Scene not found");
+    const beforeSnapshot = audit ? this.snapshot(scene) : undefined;
     await assertTimelineEventInProject(
       this.prisma,
       projectId,
@@ -545,9 +769,7 @@ export class StoryboardService {
       },
     });
 
-    // Update POV character via SceneCharacter join table
     if (dto.povCharacterSlug !== undefined) {
-      // Remove existing POV
       await this.prisma.sceneCharacter.deleteMany({
         where: { sceneId: id, isPov: true },
       });
@@ -566,14 +788,58 @@ export class StoryboardService {
       }
     }
 
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "Scene",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
     return updated;
   }
 
-  async deleteScene(projectId: string, id: string) {
+  async deleteScene(projectId: string, id: string, audit?: AuditContext) {
     const scene = await this.prisma.scene.findFirst({
       where: { id, chapter: { work: { projectId } } },
+      include: {
+        plotline: { select: { id: true, name: true, slug: true } },
+        characters: {
+          select: {
+            entityId: true,
+            role: true,
+            isPov: true,
+            entity: { select: { id: true, name: true, slug: true } },
+          },
+        },
+        location: { select: { id: true, name: true, slug: true } },
+      },
     });
     if (!scene) throw new NotFoundException("Scene not found");
+    const beforeSnapshot = audit ? this.snapshot(scene) : undefined;
+
     await this.prisma.scene.delete({ where: { id } });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "Scene",
+        targetId: scene.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic snapshot for JSON column
+  private snapshot(record: any): object {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally stripping internal fields
+    const { projectId, searchVector, createdAt, updatedAt, ...rest } = record;
+    return rest;
   }
 }

@@ -3,6 +3,7 @@ import { LoreService } from "../../lore/lore.service";
 import { CreateLoreArticleDto } from "../../lore/dto/create-lore-article.dto";
 import { UpdateLoreArticleDto } from "../../lore/dto/update-lore-article.dto";
 import { McpAuthContext } from "../../oauth/oauth.types";
+import { auditContextFromMcp } from "../../audit/audit.types";
 import { ToolRegistrar, slugArg, textResult } from "../tool-utils";
 
 function shapeArticle<
@@ -83,7 +84,11 @@ export function registerLoreTools(
     },
     async (input) =>
       shapeArticle(
-        await lore.create(ctx.projectId, input as CreateLoreArticleDto),
+        await lore.create(
+          ctx.projectId,
+          input as CreateLoreArticleDto,
+          auditContextFromMcp(ctx),
+        ),
       ),
   );
 
@@ -110,6 +115,7 @@ export function registerLoreTools(
           ctx.projectId,
           articleSlug,
           updates as UpdateLoreArticleDto,
+          auditContextFromMcp(ctx),
         ),
       ),
   );
@@ -126,7 +132,7 @@ export function registerLoreTools(
       input: z.object({ articleSlug: slugArg("lore article") }),
     },
     async ({ articleSlug }) => {
-      await lore.delete(ctx.projectId, articleSlug);
+      await lore.delete(ctx.projectId, articleSlug, auditContextFromMcp(ctx));
       return textResult(`Deleted lore article "${articleSlug}".`);
     },
   );

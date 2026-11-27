@@ -4,6 +4,7 @@ import { SEARCH_KINDS, SearchService } from "../../search/search.service";
 import { EntityTypesService } from "../../entity-types/entity-types.service";
 import { TagsService } from "../../tags/tags.service";
 import { McpAuthContext } from "../../oauth/oauth.types";
+import { auditContextFromMcp } from "../../audit/audit.types";
 import { ToolRegistrar, limitArg } from "../tool-utils";
 
 export function registerProjectTools(
@@ -106,7 +107,8 @@ export function registerProjectWriteTools(
         color: z.string().optional().describe("Hex color, e.g. #3b82f6"),
       }),
     },
-    async (input) => deps.entityTypes.create(ctx.projectId, input),
+    async (input) =>
+      deps.entityTypes.create(ctx.projectId, input, auditContextFromMcp(ctx)),
   );
 
   reg.tool(
@@ -129,7 +131,12 @@ export function registerProjectWriteTools(
       }),
     },
     async ({ slug, ...dto }) =>
-      deps.entityTypes.update(ctx.projectId, slug, dto),
+      deps.entityTypes.update(
+        ctx.projectId,
+        slug,
+        dto,
+        auditContextFromMcp(ctx),
+      ),
   );
 
   reg.tool(
@@ -166,10 +173,15 @@ export function registerProjectWriteTools(
       }),
     },
     async ({ slug, entities, moveTo }) => {
-      await deps.entityTypes.delete(ctx.projectId, slug, {
-        entities,
-        to: moveTo,
-      });
+      await deps.entityTypes.delete(
+        ctx.projectId,
+        slug,
+        {
+          entities,
+          to: moveTo,
+        },
+        auditContextFromMcp(ctx),
+      );
       return { deleted: slug };
     },
   );
@@ -191,6 +203,12 @@ export function registerProjectWriteTools(
         visibility: z.enum(["PRIVATE", "PUBLIC", "UNLISTED"]).optional(),
       }),
     },
-    async (input) => deps.projects.update(ctx.projectSlug, ctx.ownerId, input),
+    async (input) =>
+      deps.projects.update(
+        ctx.projectSlug,
+        ctx.ownerId,
+        input,
+        auditContextFromMcp(ctx),
+      ),
   );
 }

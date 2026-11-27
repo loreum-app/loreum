@@ -20,6 +20,7 @@ import { TimelineModule } from "./timeline/timeline.module";
 import { LoreModule } from "./lore/lore.module";
 import { StoryboardModule } from "./storyboard/storyboard.module";
 import { McpModule } from "./mcp/mcp.module";
+import { AuditModule } from "./audit/audit.module";
 import { AppController } from "./app.controller";
 
 @Module({
@@ -56,6 +57,7 @@ import { AppController } from "./app.controller";
     StoryboardModule,
     SearchModule,
     McpModule,
+    AuditModule,
     // GraphModule,
   ],
   controllers: [AppController],

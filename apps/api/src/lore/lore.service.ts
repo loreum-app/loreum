@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { AuditLedgerService } from "../audit/audit-ledger.service";
+import { AuditContext } from "../audit/audit.types";
 import { CreateLoreArticleDto } from "./dto/create-lore-article.dto";
 import { UpdateLoreArticleDto } from "./dto/update-lore-article.dto";
 import { generateUniqueSlug } from "../common/utils/slug";
@@ -26,9 +28,16 @@ const articleInclude = {
 
 @Injectable()
 export class LoreService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditLedger: AuditLedgerService,
+  ) {}
 
-  async create(projectId: string, dto: CreateLoreArticleDto) {
+  async create(
+    projectId: string,
+    dto: CreateLoreArticleDto,
+    audit?: AuditContext,
+  ) {
     const slug = await generateUniqueSlug(
       this.prisma,
       "loreArticle",
@@ -40,7 +49,7 @@ export class LoreService {
 
     const tagIds = await this.resolveTagNames(projectId, dto.tags);
 
-    return this.prisma.loreArticle.create({
+    const created = await this.prisma.loreArticle.create({
       data: {
         projectId,
         title: dto.title,
@@ -56,6 +65,19 @@ export class LoreService {
       },
       include: articleInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "LoreArticle",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
   async findAllByProject(
@@ -105,8 +127,14 @@ export class LoreService {
     return article;
   }
 
-  async update(projectId: string, slug: string, dto: UpdateLoreArticleDto) {
+  async update(
+    projectId: string,
+    slug: string,
+    dto: UpdateLoreArticleDto,
+    audit?: AuditContext,
+  ) {
     const article = await this.findBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(article) : undefined;
 
     const data: Record<string, unknown> = {};
     if (dto.content !== undefined) data.content = dto.content;
@@ -142,19 +170,45 @@ export class LoreService {
       };
     }
 
-    return this.prisma.loreArticle.update({
+    const updated = await this.prisma.loreArticle.update({
       where: { id: article.id },
       data,
       include: articleInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "LoreArticle",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
-  async delete(projectId: string, slug: string) {
+  async delete(projectId: string, slug: string, audit?: AuditContext) {
     const article = await this.findBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(article) : undefined;
 
     await this.prisma.loreArticle.delete({
       where: { id: article.id },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "LoreArticle",
+        targetId: article.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
   }
 
   /** Resolve tag names to ids, creating tags that do not exist yet. */
@@ -197,5 +251,25 @@ export class LoreService {
     });
 
     return entities.map((e) => e.id);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic snapshot for JSON column
+  private snapshot(article: any): object {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally stripping internal fields
+    const { projectId, searchVector, createdAt, updatedAt, ...rest } = article;
+    const clean = { ...rest };
+    if (clean.entities) {
+      clean.entitySlugs = clean.entities
+        .map((e: { entity?: { slug?: string } }) => e.entity?.slug)
+        .filter(Boolean);
+      delete clean.entities;
+    }
+    if (clean.loreArticleTags) {
+      clean.tags = clean.loreArticleTags
+        .map((lt: { tag?: { name?: string } }) => lt.tag?.name)
+        .filter(Boolean);
+      delete clean.loreArticleTags;
+    }
+    return clean;
   }
 }

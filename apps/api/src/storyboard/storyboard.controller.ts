@@ -17,6 +17,7 @@ import { User } from "../auth/decorators/user.decorator";
 import { AuthUser } from "../auth/types/jwt.types";
 import { ProjectsService } from "../projects/projects.service";
 import { StoryboardService } from "./storyboard.service";
+import { auditContextFromUser } from "../audit/audit.types";
 import { CreatePlotlineDto } from "./dto/create-plotline.dto";
 import { CreatePlotPointDto } from "./dto/create-plot-point.dto";
 import { CreateWorkDto } from "./dto/create-work.dto";
@@ -60,7 +61,11 @@ export class StoryboardController {
     @Body() dto: CreatePlotlineDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.createPlotline(project.id, dto);
+    return this.storyboardService.createPlotline(
+      project.id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Get("plotlines")
@@ -93,7 +98,12 @@ export class StoryboardController {
     @Body() dto: UpdatePlotlineDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.updatePlotline(project.id, slug, dto);
+    return this.storyboardService.updatePlotline(
+      project.id,
+      slug,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete("plotlines/:slug")
@@ -105,7 +115,11 @@ export class StoryboardController {
     @Param("slug") slug: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.deletePlotline(project.id, slug);
+    return this.storyboardService.deletePlotline(
+      project.id,
+      slug,
+      auditContextFromUser(user),
+    );
   }
 
   // ── Plot Points ──
@@ -123,6 +137,7 @@ export class StoryboardController {
       project.id,
       plotlineSlug,
       dto,
+      auditContextFromUser(user),
     );
   }
 
@@ -135,7 +150,12 @@ export class StoryboardController {
     @Body() dto: UpdatePlotPointDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.updatePlotPoint(project.id, id, dto);
+    return this.storyboardService.updatePlotPoint(
+      project.id,
+      id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete("points/:id")
@@ -147,7 +167,11 @@ export class StoryboardController {
     @Param("id") id: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.deletePlotPoint(project.id, id);
+    return this.storyboardService.deletePlotPoint(
+      project.id,
+      id,
+      auditContextFromUser(user),
+    );
   }
 
   // ── Works ──
@@ -160,7 +184,11 @@ export class StoryboardController {
     @Body() dto: CreateWorkDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.createWork(project.id, dto);
+    return this.storyboardService.createWork(
+      project.id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Get("works")
@@ -193,7 +221,12 @@ export class StoryboardController {
     @Body() dto: UpdateWorkDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.updateWork(project.id, slug, dto);
+    return this.storyboardService.updateWork(
+      project.id,
+      slug,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete("works/:slug")
@@ -205,7 +238,11 @@ export class StoryboardController {
     @Param("slug") slug: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.deleteWork(project.id, slug);
+    return this.storyboardService.deleteWork(
+      project.id,
+      slug,
+      auditContextFromUser(user),
+    );
   }
 
   // ── Chapters ──
@@ -219,7 +256,12 @@ export class StoryboardController {
     @Body() dto: CreateChapterDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.createChapter(project.id, workSlug, dto);
+    return this.storyboardService.createChapter(
+      project.id,
+      workSlug,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Patch("chapters/:id")
@@ -231,7 +273,12 @@ export class StoryboardController {
     @Body() dto: UpdateChapterDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.updateChapter(project.id, id, dto);
+    return this.storyboardService.updateChapter(
+      project.id,
+      id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete("chapters/:id")
@@ -243,7 +290,11 @@ export class StoryboardController {
     @Param("id") id: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.deleteChapter(project.id, id);
+    return this.storyboardService.deleteChapter(
+      project.id,
+      id,
+      auditContextFromUser(user),
+    );
   }
 
   // ── Scenes ──
@@ -256,7 +307,11 @@ export class StoryboardController {
     @Body() dto: CreateSceneDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.createScene(project.id, dto);
+    return this.storyboardService.createScene(
+      project.id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Get("scenes")
@@ -279,7 +334,12 @@ export class StoryboardController {
     @Body() dto: UpdateSceneDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.updateScene(project.id, id, dto);
+    return this.storyboardService.updateScene(
+      project.id,
+      id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete("scenes/:id")
@@ -291,6 +351,10 @@ export class StoryboardController {
     @Param("id") id: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.storyboardService.deleteScene(project.id, id);
+    return this.storyboardService.deleteScene(
+      project.id,
+      id,
+      auditContextFromUser(user),
+    );
   }
 }

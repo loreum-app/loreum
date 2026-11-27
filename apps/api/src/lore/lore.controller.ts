@@ -17,6 +17,7 @@ import { User } from "../auth/decorators/user.decorator";
 import { AuthUser } from "../auth/types/jwt.types";
 import { ProjectsService } from "../projects/projects.service";
 import { LoreService } from "./lore.service";
+import { auditContextFromUser } from "../audit/audit.types";
 import { CreateLoreArticleDto } from "./dto/create-lore-article.dto";
 import { UpdateLoreArticleDto } from "./dto/update-lore-article.dto";
 
@@ -38,7 +39,7 @@ export class LoreController {
     @Body() dto: CreateLoreArticleDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.loreService.create(project.id, dto);
+    return this.loreService.create(project.id, dto, auditContextFromUser(user));
   }
 
   @Get()
@@ -78,7 +79,12 @@ export class LoreController {
     @Body() dto: UpdateLoreArticleDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.loreService.update(project.id, slug, dto);
+    return this.loreService.update(
+      project.id,
+      slug,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete(":slug")
@@ -90,6 +96,10 @@ export class LoreController {
     @Param("slug") slug: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.loreService.delete(project.id, slug);
+    return this.loreService.delete(
+      project.id,
+      slug,
+      auditContextFromUser(user),
+    );
   }
 }

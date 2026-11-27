@@ -24,6 +24,7 @@ import {
   SearchKind,
   SearchService,
 } from "../search/search.service";
+import { auditContextFromUser } from "../audit/audit.types";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
 
@@ -40,7 +41,11 @@ export class ProjectsController {
   @Post()
   @ApiOperation({ summary: "Create a new project" })
   create(@User() user: AuthUser, @Body() dto: CreateProjectDto) {
-    return this.projectsService.create(user.id, dto);
+    return this.projectsService.create(
+      user.id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Get()
@@ -109,7 +114,12 @@ export class ProjectsController {
       timelineLabelSuffix?: string;
     },
   ) {
-    return this.projectsService.saveTimelineConfig(slug, user.id, config);
+    return this.projectsService.saveTimelineConfig(
+      slug,
+      user.id,
+      config,
+      auditContextFromUser(user),
+    );
   }
 
   @Patch(":slug/graph-layout")
@@ -136,7 +146,12 @@ export class ProjectsController {
     @User() user: AuthUser,
     @Body() dto: UpdateProjectDto,
   ) {
-    return this.projectsService.update(slug, user.id, dto);
+    return this.projectsService.update(
+      slug,
+      user.id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete(":slug")

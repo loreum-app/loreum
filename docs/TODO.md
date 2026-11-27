@@ -30,23 +30,22 @@ Tracked tasks for Loreum. Near-term is the next couple weeks, long-term is every
 - [ ] Response-size caps / pagination on large list tools
 - [ ] Refresh-token grace window for dropped token responses (strict rotation today)
 
-### Change History & Revert
+### Audit Ledger ✅
 
-Replaces the review queue. Design: [CHANGE_HISTORY.md](CHANGE_HISTORY.md)
+Append-only audit ledger replaces the planned review queue. Design: [audit-ledger-design.md](superpowers/specs/2026-11-27-audit-ledger-design.md)
 
-- [ ] Drop `PendingChange` model and `ChangeStatus` enum (unused); keep `ChangeOperation` for change records
-- [ ] `ChangeEvent` / `ChangeRecord` models + migration
-- [ ] `ChangeLogService`: record before/after rows in the same transaction as each write, with actor and source
-- [ ] Route every world write through it (REST services and MCP tools)
-- [ ] Snapshot the cascaded subtree on deletes (relationships, timeline links, lore mentions, scene appearances, tags, org members)
-- [ ] Revert one event: reverse order, restore original ids, skip and report fields changed since
-- [ ] Revert to a point in time as one `REVERT_TO_TIME` event
-- [ ] Preview endpoints for both reverts (net effect grouped by entity)
-- [ ] History endpoints: paginated list with entity/source filters, earliest revertable time; owner-only
-- [ ] Retention job on the maintenance queue: prune events older than 30 days only beyond the newest 500 per project
-- [ ] History page: event list, per-event revert, "Revert world to…" with earliest-time banner
-- [ ] History tab on entity, lore, and scene pages
-- [ ] Revert preview dialog
+- [x] Drop `PendingChange` model and `ChangeStatus`/`ChangeOperation` enums (unused)
+- [x] `LedgerEntry` model + `LedgerOperation` enum + migration
+- [x] `AuditLedgerService`: append, paginated query, find-by-id, undo (compensating entry), count-based pruning gated by plan
+- [x] Wire every domain service (Entities, Relationships, Lore, Timeline, Eras, Storyboard, EntityTypes, Projects) with optional `AuditContext`
+- [x] Wire all REST controllers to pass `auditContextFromUser(user)` on write endpoints
+- [x] Wire all MCP tool files to pass `auditContextFromMcp(ctx)` on write endpoints
+- [x] History REST endpoints: paginated list with targetModel/targetId filters, single entry, undo
+- [x] History page UI at `/projects/:slug/history` with pagination, filtering, undo
+- [x] History link in project sidebar
+- [x] Plan-gated retention: FREE 500, PRO 5,000, TEAM 50,000 entries per project
+- [ ] History tab on entity, lore, and scene detail pages (filter by targetModel + targetId)
+- [ ] Undo preview dialog (show before/after data diff before confirming)
 
 ### Global Design & Polish
 
@@ -141,7 +140,7 @@ Replaces the review queue. Design: [CHANGE_HISTORY.md](CHANGE_HISTORY.md)
 - [ ] Team invitations + roles (owner, editor, viewer, commenter)
 - [ ] Real-time collaborative editing (Yjs + y-websocket + TipTap)
 - [ ] Presence indicators (cursors)
-- [ ] Activity feed and entity history: covered by Change History & Revert (see Near-Term)
+- [ ] Activity feed and entity history: foundation is the Audit Ledger (see Near-Term); needs per-entity history tabs and activity feed UI
 
 ### Phase 4 - Game Design
 

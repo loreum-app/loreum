@@ -8,6 +8,7 @@ import { CreateChapterDto } from "../../storyboard/dto/create-chapter.dto";
 import { CreateSceneDto } from "../../storyboard/dto/create-scene.dto";
 import { UpdateSceneDto } from "../../storyboard/dto/update-scene.dto";
 import { McpAuthContext } from "../../oauth/oauth.types";
+import { auditContextFromMcp } from "../../audit/audit.types";
 import { ToolRegistrar, idArg, slugArg } from "../tool-utils";
 
 const WORK_STATUS = [
@@ -95,7 +96,11 @@ export function registerStoryboardTools(
       }),
     },
     async (input) =>
-      storyboard.createPlotline(ctx.projectId, input as CreatePlotlineDto),
+      storyboard.createPlotline(
+        ctx.projectId,
+        input as CreatePlotlineDto,
+        auditContextFromMcp(ctx),
+      ),
   );
 
   reg.tool(
@@ -129,6 +134,7 @@ export function registerStoryboardTools(
         ctx.projectId,
         plotlineSlug,
         dto as CreatePlotPointDto,
+        auditContextFromMcp(ctx),
       ),
   );
 
@@ -156,6 +162,7 @@ export function registerStoryboardTools(
         ctx.projectId,
         plotPointId,
         dto as UpdatePlotPointDto,
+        auditContextFromMcp(ctx),
       ),
   );
 
@@ -187,11 +194,15 @@ export function registerStoryboardTools(
     async (input) => {
       const works = await storyboard.findAllWorks(ctx.projectId);
       const next = works.length + 1;
-      return storyboard.createWork(ctx.projectId, {
-        ...input,
-        chronologicalOrder: input.chronologicalOrder ?? next,
-        releaseOrder: input.releaseOrder ?? next,
-      } as CreateWorkDto);
+      return storyboard.createWork(
+        ctx.projectId,
+        {
+          ...input,
+          chronologicalOrder: input.chronologicalOrder ?? next,
+          releaseOrder: input.releaseOrder ?? next,
+        } as CreateWorkDto,
+        auditContextFromMcp(ctx),
+      );
     },
   );
 
@@ -213,10 +224,15 @@ export function registerStoryboardTools(
       const work = await storyboard.findWorkBySlug(ctx.projectId, workSlug);
       const sequenceNumber =
         dto.sequenceNumber ?? (work.chapters.at(-1)?.sequenceNumber ?? 0) + 1;
-      return storyboard.createChapter(ctx.projectId, workSlug, {
-        ...dto,
-        sequenceNumber,
-      } as CreateChapterDto);
+      return storyboard.createChapter(
+        ctx.projectId,
+        workSlug,
+        {
+          ...dto,
+          sequenceNumber,
+        } as CreateChapterDto,
+        auditContextFromMcp(ctx),
+      );
     },
   );
 
@@ -252,10 +268,14 @@ export function registerStoryboardTools(
       );
       const sequenceNumber =
         input.sequenceNumber ?? (scenes.at(-1)?.sequenceNumber ?? 0) + 1;
-      return storyboard.createScene(ctx.projectId, {
-        ...input,
-        sequenceNumber,
-      } as CreateSceneDto);
+      return storyboard.createScene(
+        ctx.projectId,
+        {
+          ...input,
+          sequenceNumber,
+        } as CreateSceneDto,
+        auditContextFromMcp(ctx),
+      );
     },
   );
 
@@ -280,6 +300,11 @@ export function registerStoryboardTools(
       }),
     },
     async ({ sceneId, ...dto }) =>
-      storyboard.updateScene(ctx.projectId, sceneId, dto as UpdateSceneDto),
+      storyboard.updateScene(
+        ctx.projectId,
+        sceneId,
+        dto as UpdateSceneDto,
+        auditContextFromMcp(ctx),
+      ),
   );
 }

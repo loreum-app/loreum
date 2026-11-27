@@ -17,6 +17,7 @@ import { User } from "../auth/decorators/user.decorator";
 import { AuthUser } from "../auth/types/jwt.types";
 import { ProjectsService } from "../projects/projects.service";
 import { TimelineService } from "./timeline.service";
+import { auditContextFromUser } from "../audit/audit.types";
 import { CreateTimelineEventDto } from "./dto/create-timeline-event.dto";
 import { UpdateTimelineEventDto } from "./dto/update-timeline-event.dto";
 
@@ -38,7 +39,11 @@ export class TimelineController {
     @Body() dto: CreateTimelineEventDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.timelineService.create(project.id, dto);
+    return this.timelineService.create(
+      project.id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Get()
@@ -76,7 +81,12 @@ export class TimelineController {
     @Body() dto: UpdateTimelineEventDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.timelineService.update(project.id, id, dto);
+    return this.timelineService.update(
+      project.id,
+      id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete(":id")
@@ -88,6 +98,10 @@ export class TimelineController {
     @Param("id") id: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.timelineService.delete(project.id, id);
+    return this.timelineService.delete(
+      project.id,
+      id,
+      auditContextFromUser(user),
+    );
   }
 }

@@ -3,6 +3,7 @@ import { RelationshipsService } from "../../relationships/relationships.service"
 import { CreateRelationshipDto } from "../../relationships/dto/create-relationship.dto";
 import { UpdateRelationshipDto } from "../../relationships/dto/update-relationship.dto";
 import { McpAuthContext } from "../../oauth/oauth.types";
+import { auditContextFromMcp } from "../../audit/audit.types";
 import { ToolRegistrar, idArg, slugArg, textResult } from "../tool-utils";
 
 export function registerRelationshipTools(
@@ -51,7 +52,11 @@ export function registerRelationshipTools(
       }),
     },
     async (input) =>
-      relationships.create(ctx.projectId, input as CreateRelationshipDto),
+      relationships.create(
+        ctx.projectId,
+        input as CreateRelationshipDto,
+        auditContextFromMcp(ctx),
+      ),
   );
 
   reg.tool(
@@ -75,6 +80,7 @@ export function registerRelationshipTools(
         ctx.projectId,
         relationshipId,
         updates as UpdateRelationshipDto,
+        auditContextFromMcp(ctx),
       ),
   );
 
@@ -90,7 +96,11 @@ export function registerRelationshipTools(
       input: z.object({ relationshipId: idArg("relationship") }),
     },
     async ({ relationshipId }) => {
-      await relationships.delete(ctx.projectId, relationshipId);
+      await relationships.delete(
+        ctx.projectId,
+        relationshipId,
+        auditContextFromMcp(ctx),
+      );
       return textResult(`Deleted relationship ${relationshipId}.`);
     },
   );

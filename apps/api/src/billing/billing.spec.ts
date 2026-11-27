@@ -48,8 +48,8 @@ describe("Billing (integration)", () => {
         plan: "FREE",
         effectivePlan: "TEAM",
         features: { mcp: true, api_keys: true, public_wiki: true },
-        limits: { maxProjects: null },
-        planLimits: { maxProjects: 1 },
+        limits: { maxLedgerEntries: 50_000, maxProjects: null },
+        planLimits: { maxLedgerEntries: 500, maxProjects: 1 },
       });
     });
 
@@ -68,8 +68,8 @@ describe("Billing (integration)", () => {
           plan: "PRO",
           effectivePlan: "PRO",
           features: { mcp: true, api_keys: true, public_wiki: true },
-          limits: { maxProjects: null },
-          planLimits: { maxProjects: null },
+          limits: { maxLedgerEntries: 5_000, maxProjects: null },
+          planLimits: { maxLedgerEntries: 5_000, maxProjects: null },
         });
       } finally {
         delete process.env.BILLING_ENABLED;
