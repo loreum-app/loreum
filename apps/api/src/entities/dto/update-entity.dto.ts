@@ -17,6 +17,7 @@ class CharacterFieldsDto {
   @IsOptional() @IsString() species?: string;
   @IsOptional() @IsString() age?: string;
   @IsOptional() @IsString() role?: string;
+  @IsOptional() @IsString() voiceNotes?: string;
 }
 
 class LocationFieldsDto {

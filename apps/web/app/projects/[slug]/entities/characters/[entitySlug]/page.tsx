@@ -40,6 +40,7 @@ interface EntityHub {
     species: string | null;
     age: string | null;
     role: string | null;
+    voiceNotes: string | null;
   } | null;
   sourceRelationships: {
     id: string;
@@ -120,6 +121,7 @@ export default function CharacterDetailPage() {
   const [editSpecies, setEditSpecies] = useState("");
   const [editAge, setEditAge] = useState("");
   const [editRole, setEditRole] = useState("");
+  const [editVoiceNotes, setEditVoiceNotes] = useState("");
 
   useEffect(() => {
     api<EntityHub>(`/projects/${params.slug}/entities/${params.entitySlug}`)
@@ -148,6 +150,7 @@ export default function CharacterDetailPage() {
     setEditSpecies(entity.character?.species ?? "");
     setEditAge(entity.character?.age ?? "");
     setEditRole(entity.character?.role ?? "");
+    setEditVoiceNotes(entity.character?.voiceNotes ?? "");
     setEditing(true);
   };
 
@@ -172,6 +175,7 @@ export default function CharacterDetailPage() {
               species: editSpecies || null,
               age: editAge.trim() || null,
               role: editRole || null,
+              voiceNotes: editVoiceNotes.trim() || null,
             },
           }),
         },
@@ -399,6 +403,16 @@ export default function CharacterDetailPage() {
             </Card>
           )
         )}
+
+        <RichTextSection
+          title="Voice Notes"
+          value={entity.character?.voiceNotes ?? null}
+          editing={editing}
+          editValue={editVoiceNotes}
+          onEditChange={setEditVoiceNotes}
+          rows={4}
+          placeholder="Speech patterns, verbal tics, vocabulary level..."
+        />
 
         <RichTextSection
           title="Description"

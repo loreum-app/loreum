@@ -1,4 +1,4 @@
-import { WorkStatus } from './types';
+import { WorkStatus } from "./types";
 
 export interface CreatePlotlineRequest {
   name: string;
@@ -71,6 +71,7 @@ export interface CreateSceneRequest {
   povCharacterSlug?: string;
   locationSlug?: string;
   timelineEventId?: string;
+  styleNotes?: string;
 }
 
 export interface UpdateSceneRequest {
@@ -81,4 +82,5 @@ export interface UpdateSceneRequest {
   povCharacterSlug?: string;
   locationSlug?: string;
   timelineEventId?: string | null;
+  styleNotes?: string;
 }
