@@ -69,6 +69,7 @@ export interface CreateSceneRequest {
   description?: string;
   plotlineSlug?: string;
   povCharacterSlug?: string;
+  characterSlugs?: string[];
   locationSlug?: string;
   timelineEventId?: string;
   styleNotes?: string;
@@ -80,6 +81,7 @@ export interface UpdateSceneRequest {
   description?: string;
   plotlineSlug?: string | null;
   povCharacterSlug?: string;
+  characterSlugs?: string[];
   locationSlug?: string;
   timelineEventId?: string | null;
   styleNotes?: string;

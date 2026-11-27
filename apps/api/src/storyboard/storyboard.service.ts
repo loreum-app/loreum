@@ -633,6 +633,27 @@ export class StoryboardService {
       });
     }
 
+    if (dto.characterSlugs?.length) {
+      const charEntities = await this.prisma.entity.findMany({
+        where: { projectId, slug: { in: dto.characterSlugs } },
+        select: { id: true },
+      });
+      const existingPovId = povEntityId;
+      const nonPovIds = charEntities
+        .map((e) => e.id)
+        .filter((id) => id !== existingPovId);
+      if (nonPovIds.length) {
+        await this.prisma.sceneCharacter.createMany({
+          data: nonPovIds.map((entityId) => ({
+            sceneId: scene.id,
+            entityId,
+            isPov: false,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     if (audit) {
       await this.auditLedger.append({
         projectId,
@@ -680,6 +701,7 @@ export class StoryboardService {
       orderBy: { sequenceNumber: "asc" },
       include: {
         plotline: { select: { id: true, name: true, slug: true } },
+        timelineEvent: { select: { id: true, name: true, date: true } },
         characters: {
           select: {
             entityId: true,
@@ -785,6 +807,28 @@ export class StoryboardService {
             where: { sceneId_entityId: { sceneId: id, entityId: pov.id } },
             create: { sceneId: id, entityId: pov.id, isPov: true },
             update: { isPov: true },
+          });
+        }
+      }
+    }
+
+    if (dto.characterSlugs !== undefined) {
+      await this.prisma.sceneCharacter.deleteMany({
+        where: { sceneId: id, isPov: false },
+      });
+      if (dto.characterSlugs.length) {
+        const charEntities = await this.prisma.entity.findMany({
+          where: { projectId, slug: { in: dto.characterSlugs } },
+          select: { id: true },
+        });
+        if (charEntities.length) {
+          await this.prisma.sceneCharacter.createMany({
+            data: charEntities.map((e) => ({
+              sceneId: id,
+              entityId: e.id,
+              isPov: false,
+            })),
+            skipDuplicates: true,
           });
         }
       }

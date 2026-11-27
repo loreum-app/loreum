@@ -42,6 +42,7 @@ interface Scene {
   plotline: { id: string; name: string; slug: string } | null;
   characters: SceneCharacter[];
   location: { id: string; name: string; slug: string } | null;
+  timelineEvent: { id: string; name: string; date: string } | null;
   styleNotes: string | null;
 }
 
@@ -121,6 +122,10 @@ export default function WorkDetailPage() {
   const [newScenePovSlug, setNewScenePovSlug] = useState("");
   const [newSceneLocationSlug, setNewSceneLocationSlug] = useState("");
   const [newSceneStyleNotes, setNewSceneStyleNotes] = useState("");
+  const [newSceneTimelineEventId, setNewSceneTimelineEventId] = useState("");
+  const [newSceneCharacterSlugs, setNewSceneCharacterSlugs] = useState<
+    string[]
+  >([]);
 
   // Scene editing
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
@@ -130,10 +135,17 @@ export default function WorkDetailPage() {
   const [editScenePovSlug, setEditScenePovSlug] = useState("");
   const [editSceneLocationSlug, setEditSceneLocationSlug] = useState("");
   const [editSceneStyleNotes, setEditSceneStyleNotes] = useState("");
+  const [editSceneTimelineEventId, setEditSceneTimelineEventId] = useState("");
+  const [editSceneCharacterSlugs, setEditSceneCharacterSlugs] = useState<
+    string[]
+  >([]);
 
   // Reference data
   const [entities, setEntities] = useState<EntityOption[]>([]);
   const [plotlines, setPlotlines] = useState<PlotlineOption[]>([]);
+  const [timelineEvents, setTimelineEvents] = useState<
+    { id: string; name: string; date: string }[]
+  >([]);
 
   useEffect(() => {
     api<Work>(`/projects/${params.slug}/storyboard/works/${params.workSlug}`)
@@ -146,6 +158,11 @@ export default function WorkDetailPage() {
       .catch(() => {});
     api<PlotlineOption[]>(`/projects/${params.slug}/storyboard/plotlines`)
       .then(setPlotlines)
+      .catch(() => {});
+    api<{ id: string; name: string; date: string }[]>(
+      `/projects/${params.slug}/timeline`,
+    )
+      .then(setTimelineEvents)
       .catch(() => {});
   }, [params.slug, params.workSlug]);
 
@@ -305,6 +322,10 @@ export default function WorkDetailPage() {
     );
     setEditSceneLocationSlug(scene.location?.slug ?? "");
     setEditSceneStyleNotes(scene.styleNotes ?? "");
+    setEditSceneTimelineEventId(scene.timelineEvent?.id ?? "");
+    setEditSceneCharacterSlugs(
+      scene.characters?.filter((c) => !c.isPov).map((c) => c.entity.slug) ?? [],
+    );
   };
 
   const handleSaveScene = async (chapterId: string, sceneId: string) => {
@@ -319,7 +340,9 @@ export default function WorkDetailPage() {
             plotlineSlug: editScenePlotlineSlug || null,
             povCharacterSlug: editScenePovSlug || null,
             locationSlug: editSceneLocationSlug || null,
+            timelineEventId: editSceneTimelineEventId || null,
             styleNotes: editSceneStyleNotes.trim() || null,
+            characterSlugs: editSceneCharacterSlugs,
           }),
         },
       );
@@ -365,6 +388,8 @@ export default function WorkDetailPage() {
     setNewScenePovSlug("");
     setNewSceneLocationSlug("");
     setNewSceneStyleNotes("");
+    setNewSceneTimelineEventId("");
+    setNewSceneCharacterSlugs([]);
   };
 
   const handleAddScene = async (chapterId: string) => {
@@ -382,6 +407,10 @@ export default function WorkDetailPage() {
             povCharacterSlug: newScenePovSlug || undefined,
             locationSlug: newSceneLocationSlug || undefined,
             styleNotes: newSceneStyleNotes.trim() || undefined,
+            timelineEventId: newSceneTimelineEventId || undefined,
+            characterSlugs: newSceneCharacterSlugs.length
+              ? newSceneCharacterSlugs
+              : undefined,
             sequenceNumber: scenes.length + 1,
           }),
         },
@@ -698,7 +727,7 @@ export default function WorkDetailPage() {
                                         placeholder="What happens..."
                                       />
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                                       <div className="space-y-1">
                                         <Label className="text-xs">
                                           Plotline
@@ -754,6 +783,81 @@ export default function WorkDetailPage() {
                                           }
                                           placeholder="None"
                                           searchPlaceholder="Search locations..."
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">
+                                          Timeline Event
+                                        </Label>
+                                        <Combobox
+                                          options={timelineEvents.map((e) => ({
+                                            value: e.id,
+                                            label: e.name,
+                                            sublabel: e.date,
+                                          }))}
+                                          value={editSceneTimelineEventId}
+                                          onValueChange={
+                                            setEditSceneTimelineEventId
+                                          }
+                                          placeholder="None"
+                                          searchPlaceholder="Search events..."
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">
+                                        Characters
+                                      </Label>
+                                      <div className="flex flex-wrap items-center gap-1">
+                                        {editSceneCharacterSlugs.map((slug) => {
+                                          const char = characters.find(
+                                            (c) => c.slug === slug,
+                                          );
+                                          return (
+                                            <span
+                                              key={slug}
+                                              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+                                            >
+                                              {char?.name ?? slug}
+                                              <button
+                                                type="button"
+                                                className="ml-0.5 text-muted-foreground hover:text-foreground"
+                                                onClick={() =>
+                                                  setEditSceneCharacterSlugs(
+                                                    (prev) =>
+                                                      prev.filter(
+                                                        (s) => s !== slug,
+                                                      ),
+                                                  )
+                                                }
+                                              >
+                                                ×
+                                              </button>
+                                            </span>
+                                          );
+                                        })}
+                                        <Combobox
+                                          options={characters
+                                            .filter(
+                                              (c) =>
+                                                c.slug !== editScenePovSlug &&
+                                                !editSceneCharacterSlugs.includes(
+                                                  c.slug,
+                                                ),
+                                            )
+                                            .map((c) => ({
+                                              value: c.slug,
+                                              label: c.name,
+                                            }))}
+                                          value=""
+                                          onValueChange={(slug) =>
+                                            slug &&
+                                            setEditSceneCharacterSlugs(
+                                              (prev) => [...prev, slug],
+                                            )
+                                          }
+                                          placeholder="Add character..."
+                                          searchPlaceholder="Search characters..."
                                         />
                                       </div>
                                     </div>
@@ -827,6 +931,20 @@ export default function WorkDetailPage() {
                                               POV: {c.entity.name}
                                             </Link>
                                           ))}
+                                        {scene.characters
+                                          ?.filter((c) => !c.isPov)
+                                          .map((c) => (
+                                            <Link
+                                              key={c.entityId}
+                                              href={`/projects/${params.slug}/entities/characters/${c.entity.slug}`}
+                                              className="hover:underline"
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                            >
+                                              {c.entity.name}
+                                            </Link>
+                                          ))}
                                         {scene.location && (
                                           <Link
                                             href={`/projects/${params.slug}/entities/locations/${scene.location.slug}`}
@@ -835,6 +953,11 @@ export default function WorkDetailPage() {
                                           >
                                             @ {scene.location.name}
                                           </Link>
+                                        )}
+                                        {scene.timelineEvent && (
+                                          <span>
+                                            Event: {scene.timelineEvent.name}
+                                          </span>
                                         )}
                                       </div>
                                     </div>
@@ -889,7 +1012,7 @@ export default function WorkDetailPage() {
                                     rows={2}
                                   />
                                 </div>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                                   <div className="space-y-1">
                                     <Label className="text-xs">Plotline</Label>
                                     <Combobox
@@ -931,6 +1054,78 @@ export default function WorkDetailPage() {
                                       onValueChange={setNewSceneLocationSlug}
                                       placeholder="None"
                                       searchPlaceholder="Search locations..."
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">
+                                      Timeline Event
+                                    </Label>
+                                    <Combobox
+                                      options={timelineEvents.map((e) => ({
+                                        value: e.id,
+                                        label: e.name,
+                                        sublabel: e.date,
+                                      }))}
+                                      value={newSceneTimelineEventId}
+                                      onValueChange={setNewSceneTimelineEventId}
+                                      placeholder="None"
+                                      searchPlaceholder="Search events..."
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Characters</Label>
+                                  <div className="flex flex-wrap items-center gap-1">
+                                    {newSceneCharacterSlugs.map((slug) => {
+                                      const char = characters.find(
+                                        (c) => c.slug === slug,
+                                      );
+                                      return (
+                                        <span
+                                          key={slug}
+                                          className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+                                        >
+                                          {char?.name ?? slug}
+                                          <button
+                                            type="button"
+                                            className="ml-0.5 text-muted-foreground hover:text-foreground"
+                                            onClick={() =>
+                                              setNewSceneCharacterSlugs(
+                                                (prev) =>
+                                                  prev.filter(
+                                                    (s) => s !== slug,
+                                                  ),
+                                              )
+                                            }
+                                          >
+                                            ×
+                                          </button>
+                                        </span>
+                                      );
+                                    })}
+                                    <Combobox
+                                      options={characters
+                                        .filter(
+                                          (c) =>
+                                            c.slug !== newScenePovSlug &&
+                                            !newSceneCharacterSlugs.includes(
+                                              c.slug,
+                                            ),
+                                        )
+                                        .map((c) => ({
+                                          value: c.slug,
+                                          label: c.name,
+                                        }))}
+                                      value=""
+                                      onValueChange={(slug) =>
+                                        slug &&
+                                        setNewSceneCharacterSlugs((prev) => [
+                                          ...prev,
+                                          slug,
+                                        ])
+                                      }
+                                      placeholder="Add character..."
+                                      searchPlaceholder="Search characters..."
                                     />
                                   </div>
                                 </div>

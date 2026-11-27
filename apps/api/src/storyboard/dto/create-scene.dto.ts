@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt } from "class-validator";
+import { IsString, IsOptional, IsInt, IsArray } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import type { CreateSceneRequest } from "@loreum/types";
 
@@ -35,6 +35,12 @@ export class CreateSceneDto implements CreateSceneRequest {
   @IsOptional()
   @IsString()
   povCharacterSlug?: string;
+
+  @ApiPropertyOptional({ description: "Non-POV character entity slugs" })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  characterSlugs?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -24,6 +24,7 @@ import {
   RichTextSection,
   mergeRelationships,
 } from "../../_components/entity-sections";
+import { HistorySection } from "@/components/history-section";
 import { Users, Pencil, Save, X, Trash2 } from "lucide-react";
 
 interface OrgMember {
@@ -451,6 +452,12 @@ export default function OrganizationDetailPage() {
           onEditChange={setEditNotes}
           rows={4}
           placeholder="Personal notes..."
+        />
+
+        <HistorySection
+          projectSlug={params.slug}
+          targetModel="Entity"
+          targetId={entity.id}
         />
       </div>
     </div>

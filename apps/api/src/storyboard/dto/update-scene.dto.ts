@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt } from "class-validator";
+import { IsString, IsOptional, IsInt, IsArray } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class UpdateSceneDto {
@@ -31,6 +31,12 @@ export class UpdateSceneDto {
   @IsOptional()
   @IsString()
   povCharacterSlug?: string | null;
+
+  @ApiPropertyOptional({ description: "Non-POV character entity slugs" })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  characterSlugs?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()

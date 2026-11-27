@@ -44,8 +44,8 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 - [x] History page UI at `/projects/:slug/history` with pagination, filtering, undo
 - [x] History link in project sidebar
 - [x] Plan-gated retention: FREE 500, PRO 5,000, TEAM 50,000 entries per project
-- [ ] History tab on entity, lore, and scene detail pages (filter by targetModel + targetId)
-- [ ] Undo preview dialog (show before/after data diff before confirming)
+- [x] History tab on entity, lore, and scene detail pages (filter by targetModel + targetId)
+- [x] Undo preview dialog (show before/after data diff before confirming)
 
 ### Global Design & Polish
 
@@ -58,8 +58,8 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 
 #### Storyboard
 
-- [ ] Scenes: multi-character picker (SceneCharacter join table exists, no UI)
-- [ ] Scenes: timeline event link in create/edit forms
+- [x] Scenes: multi-character picker (SceneCharacter join table exists, no UI)
+- [x] Scenes: timeline event link in create/edit forms
 - [ ] Plot points: support multiple entities (separate pickers for Characters, Locations, Orgs, item types)
 
 #### Entities
@@ -70,7 +70,7 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 
 #### Lore
 
-- [ ] Add connected entities from the lore article UI
+- [x] Add connected entities from the lore article UI
 - [ ] What other metadata does lore need? (hierarchy, backlinks, etc.)
 
 #### Architecture
@@ -106,9 +106,8 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 - [x] Style guide service + controller (GET/PUT `/projects/:slug/style-guide`)
 - [x] MCP tool: `get_style_guide` - read tool
 - [x] MCP tool: `update_style_guide` - write tool
-- [ ] Style guide wizard UI (step-by-step: dropdowns for POV/tense/voice/tone, text areas for rules/examples)
-- [x] Style guide editor UI (full form view, accessible after wizard or directly)
-- [ ] Trigger wizard on project creation (optional) + accessible from style guide page any time
+- [x] Style guide editor UI (full form view, accessible from style guide page)
+- N/A: wizard UI — MCP-first approach; agents use `update_style_guide` tool directly
 - [x] Scene create/edit form: add `styleNotes` textarea
 - [x] Character create/edit form: add `voiceNotes` textarea
 
