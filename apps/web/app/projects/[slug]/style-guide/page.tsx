@@ -196,7 +196,12 @@ export default function StyleGuidePage() {
               onValueChange={(v) => setField("pov", v ?? "")}
             >
               <SelectTrigger id="sg-pov">
-                <SelectValue />
+                <SelectValue>
+                  {(value: string | null) =>
+                    POV_OPTIONS.find((o) => o.value === value)?.label ??
+                    "Not set"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {POV_OPTIONS.map((opt) => (
@@ -215,7 +220,12 @@ export default function StyleGuidePage() {
               onValueChange={(v) => setField("tense", v ?? "")}
             >
               <SelectTrigger id="sg-tense">
-                <SelectValue />
+                <SelectValue>
+                  {(value: string | null) =>
+                    TENSE_OPTIONS.find((o) => o.value === value)?.label ??
+                    "Not set"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {TENSE_OPTIONS.map((opt) => (
