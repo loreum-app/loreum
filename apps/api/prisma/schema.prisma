@@ -212,10 +212,10 @@ model Entity {
   entityTags            EntityTag[]
 
   // Storyboard
-  locationScenes    Scene[]          @relation("SceneLocation")
-  plotPoints        PlotPoint[]      @relation("PlotPointEntity")
-  plotPointLocations PlotPoint[]     @relation("PlotPointLocation")
-  sceneCharacters   SceneCharacter[]
+  locationScenes     Scene[]            @relation("SceneLocation")
+  plotPointLocations PlotPoint[]        @relation("PlotPointLocation")
+  plotPointEntities  PlotPointEntity[]  @relation("PlotPointEntities")
+  sceneCharacters    SceneCharacter[]
 
   searchVector Unsupported("tsvector")?
 
@@ -402,18 +402,21 @@ model TimelineEventEntity {
 // ── Lore ──
 
 model LoreArticle {
-  id        String  @id @default(cuid())
-  projectId String
-  title     String
-  slug      String
-  content   String  @db.Text
-  category  String?
+  id              String  @id @default(cuid())
+  projectId       String
+  title           String
+  slug            String
+  content         String  @db.Text
+  category        String?
+  parentArticleId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project  Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  entities LoreArticleEntity[]
+  project        Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentArticle  LoreArticle?        @relation("LoreArticleHierarchy", fields: [parentArticleId], references: [id], onDelete: SetNull)
+  childArticles  LoreArticle[]       @relation("LoreArticleHierarchy")
+  entities       LoreArticleEntity[]
 
   loreArticleTags LoreArticleTag[]
 
@@ -511,7 +514,6 @@ model PlotPoint {
   label           String?
   sceneId         String?
   timelineEventId String?
-  entityId        String?
   locationId      String?
 
   createdAt DateTime @default(now())
@@ -520,11 +522,23 @@ model PlotPoint {
   plotline      Plotline       @relation(fields: [plotlineId], references: [id], onDelete: Cascade)
   scene         Scene?         @relation(fields: [sceneId], references: [id], onDelete: SetNull)
   timelineEvent TimelineEvent? @relation(fields: [timelineEventId], references: [id], onDelete: SetNull)
-  entity        Entity?        @relation("PlotPointEntity", fields: [entityId], references: [id], onDelete: SetNull)
   location      Entity?        @relation("PlotPointLocation", fields: [locationId], references: [id], onDelete: SetNull)
+  entities      PlotPointEntity[]
 
   @@index([plotlineId, sequenceNumber])
   @@map("plot_points")
+}
+
+model PlotPointEntity {
+  plotPointId String
+  entityId    String
+  role        String?
+
+  plotPoint PlotPoint @relation(fields: [plotPointId], references: [id], onDelete: Cascade)
+  entity    Entity    @relation("PlotPointEntities", fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@id([plotPointId, entityId])
+  @@map("plot_point_entities")
 }
 
 model Work {

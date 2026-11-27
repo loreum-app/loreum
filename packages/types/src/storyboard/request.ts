@@ -21,7 +21,7 @@ export interface CreatePlotPointRequest {
   sequenceNumber: number;
   sceneId?: string;
   timelineEventId?: string;
-  entitySlug?: string;
+  entitySlugs?: string[];
   locationSlug?: string;
 }
 
@@ -32,7 +32,7 @@ export interface UpdatePlotPointRequest {
   sequenceNumber?: number;
   sceneId?: string | null;
   timelineEventId?: string | null;
-  entitySlug?: string | null;
+  entitySlugs?: string[];
   locationSlug?: string | null;
 }
 

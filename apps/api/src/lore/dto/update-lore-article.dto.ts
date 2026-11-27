@@ -31,4 +31,9 @@ export class UpdateLoreArticleDto implements UpdateLoreArticleRequest {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  parentArticleSlug?: string | null;
 }

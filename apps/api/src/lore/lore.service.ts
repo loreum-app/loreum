@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditLedgerService } from "../audit/audit-ledger.service";
 import { AuditContext } from "../audit/audit.types";
@@ -23,6 +27,11 @@ const articleInclude = {
     include: {
       tag: { select: { id: true, name: true, color: true } },
     },
+  },
+  parentArticle: { select: { id: true, title: true, slug: true } },
+  childArticles: {
+    select: { id: true, title: true, slug: true },
+    orderBy: { title: "asc" as const },
   },
 };
 
@@ -49,6 +58,14 @@ export class LoreService {
 
     const tagIds = await this.resolveTagNames(projectId, dto.tags);
 
+    let parentArticleId: string | undefined;
+    if (dto.parentArticleSlug) {
+      const parent = await this.prisma.loreArticle.findFirst({
+        where: { projectId, slug: dto.parentArticleSlug },
+      });
+      if (parent) parentArticleId = parent.id;
+    }
+
     const created = await this.prisma.loreArticle.create({
       data: {
         projectId,
@@ -56,6 +73,7 @@ export class LoreService {
         slug,
         content: dto.content,
         category: dto.category,
+        parentArticleId,
         entities: {
           create: entityIds.map((entityId) => ({ entityId })),
         },
@@ -110,6 +128,7 @@ export class LoreService {
         category: true,
         createdAt: true,
         updatedAt: true,
+        parentArticle: { select: { id: true, title: true, slug: true } },
       },
     });
   }
@@ -168,6 +187,41 @@ export class LoreService {
         deleteMany: {},
         create: tagIds.map((tagId) => ({ tagId })),
       };
+    }
+
+    if (dto.parentArticleSlug !== undefined) {
+      if (dto.parentArticleSlug === null) {
+        data.parentArticleId = null;
+      } else {
+        const parent = await this.prisma.loreArticle.findFirst({
+          where: { projectId, slug: dto.parentArticleSlug },
+        });
+        if (parent) {
+          // Prevent self-reference
+          if (parent.id === article.id) {
+            throw new BadRequestException(
+              "An article cannot be its own parent",
+            );
+          }
+          // Prevent cycles: walk up from the proposed parent
+          let current: string | null = parent.id;
+          const visited = new Set<string>();
+          while (current) {
+            if (current === article.id) {
+              throw new BadRequestException("Circular hierarchy detected");
+            }
+            if (visited.has(current)) break;
+            visited.add(current);
+            const ancestor: { parentArticleId: string | null } | null =
+              await this.prisma.loreArticle.findUnique({
+                where: { id: current },
+                select: { parentArticleId: true },
+              });
+            current = ancestor?.parentArticleId ?? null;
+          }
+          data.parentArticleId = parent.id;
+        }
+      }
     }
 
     const updated = await this.prisma.loreArticle.update({
