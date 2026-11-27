@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from "@loreum/ui/card";
 import { History, ChevronLeft, ChevronRight, Undo2 } from "lucide-react";
+import { UndoPreviewDialog } from "@/components/undo-preview-dialog";
 
 interface LedgerEntry {
   id: string;
@@ -99,6 +100,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [undoing, setUndoing] = useState<string | null>(null);
+  const [previewEntry, setPreviewEntry] = useState<LedgerEntry | null>(null);
   const [filterModel, setFilterModel] = useState("all");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -134,6 +136,7 @@ export default function HistoryPage() {
       await api(`/projects/${params.slug}/history/${entryId}/undo`, {
         method: "POST",
       });
+      setPreviewEntry(null);
       setRefreshKey((k) => k + 1);
     } catch {
       // Entry stays in its current state; the user sees it has not changed
@@ -234,11 +237,11 @@ export default function HistoryPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleUndo(entry.id)}
+                          onClick={() => setPreviewEntry(entry)}
                           disabled={undoing === entry.id}
                         >
                           <Undo2 className="mr-1 h-3.5 w-3.5" />
-                          {undoing === entry.id ? "Undoing..." : "Undo"}
+                          Undo
                         </Button>
                       )}
                     </div>
@@ -287,6 +290,17 @@ export default function HistoryPage() {
           )}
         </>
       )}
+      <UndoPreviewDialog
+        entry={previewEntry}
+        open={!!previewEntry}
+        onOpenChange={(open) => {
+          if (!open) setPreviewEntry(null);
+        }}
+        onConfirm={() => {
+          if (previewEntry) handleUndo(previewEntry.id);
+        }}
+        confirming={!!undoing}
+      />
     </div>
   );
 }

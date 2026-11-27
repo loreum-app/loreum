@@ -10,7 +10,9 @@ import { Textarea } from "@loreum/ui/textarea";
 import { Label } from "@loreum/ui/label";
 import { Card, CardContent } from "@loreum/ui/card";
 import { Markdown } from "@/components/markdown";
-import { Pencil, Trash2, Save, X } from "lucide-react";
+import { Combobox } from "@loreum/ui/combobox";
+import { HistorySection } from "@/components/history-section";
+import { Pencil, Trash2, Save, X, Plus } from "lucide-react";
 
 export default function LoreArticlePage() {
   const params = useParams<{ slug: string; loreSlug: string }>();
@@ -24,6 +26,13 @@ export default function LoreArticlePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [editingEntities, setEditingEntities] = useState(false);
+  const [selectedEntitySlugs, setSelectedEntitySlugs] = useState<string[]>([]);
+  const [savingEntities, setSavingEntities] = useState(false);
+  const [allEntities, setAllEntities] = useState<
+    { id: string; name: string; slug: string; type: string }[]
+  >([]);
+
   useEffect(() => {
     api<LoreArticle>(`/projects/${params.slug}/lore/${params.loreSlug}`)
       .then((a) => {
@@ -35,6 +44,43 @@ export default function LoreArticlePage() {
       .catch(() => setArticle(null))
       .finally(() => setLoading(false));
   }, [params.slug, params.loreSlug]);
+
+  useEffect(() => {
+    api<{ id: string; name: string; slug: string; type: string }[]>(
+      `/projects/${params.slug}/entities`,
+    )
+      .then(setAllEntities)
+      .catch(() => {});
+  }, [params.slug]);
+
+  const startEditingEntities = () => {
+    setSelectedEntitySlugs(
+      (article?.entities ?? [])
+        .filter((link) => link.entity)
+        .map((link) => link.entity!.slug),
+    );
+    setEditingEntities(true);
+  };
+
+  const handleSaveEntities = async () => {
+    if (!article) return;
+    setSavingEntities(true);
+    try {
+      const updated = await api<LoreArticle>(
+        `/projects/${params.slug}/lore/${article.slug}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ entitySlugs: selectedEntitySlugs }),
+        },
+      );
+      setArticle(updated);
+      setEditingEntities(false);
+    } catch {
+      setError("Failed to update entities");
+    } finally {
+      setSavingEntities(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!article) return;
@@ -208,11 +254,89 @@ export default function LoreArticlePage() {
       )}
 
       {/* Connected Entities */}
-      {article.entities && article.entities.length > 0 && (
-        <div className="mt-6">
-          <h2 className="mb-2 text-sm text-muted-foreground">
-            Connected Entities
-          </h2>
+      <div className="mt-6">
+        <div className="mb-2 flex items-center gap-2">
+          <h2 className="text-sm text-muted-foreground">Connected Entities</h2>
+          {!editingEntities && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-1.5"
+              onClick={startEditingEntities}
+            >
+              {article.entities && article.entities.length > 0 ? (
+                <Pencil className="h-3 w-3" />
+              ) : (
+                <>
+                  <Plus className="mr-1 h-3 w-3" />
+                  <span className="text-xs">Add</span>
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+        {editingEntities ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-1.5">
+              {selectedEntitySlugs.map((slug) => {
+                const ent = allEntities.find((e) => e.slug === slug);
+                return (
+                  <span
+                    key={slug}
+                    className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs"
+                  >
+                    {ent?.name ?? slug}
+                    <button
+                      type="button"
+                      className="ml-0.5 hover:text-destructive"
+                      onClick={() =>
+                        setSelectedEntitySlugs((prev) =>
+                          prev.filter((s) => s !== slug),
+                        )
+                      }
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+            <Combobox
+              options={allEntities
+                .filter((e) => !selectedEntitySlugs.includes(e.slug))
+                .map((e) => ({
+                  value: e.slug,
+                  label: e.name,
+                  sublabel: e.type.toLowerCase(),
+                }))}
+              value=""
+              onValueChange={(slug) => {
+                if (slug && !selectedEntitySlugs.includes(slug)) {
+                  setSelectedEntitySlugs((prev) => [...prev, slug]);
+                }
+              }}
+              placeholder="Add entity..."
+              searchPlaceholder="Search entities..."
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleSaveEntities}
+                disabled={savingEntities}
+              >
+                <Save className="mr-1 h-3 w-3" />
+                {savingEntities ? "Saving..." : "Save"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setEditingEntities(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : article.entities && article.entities.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {article.entities.map((link) =>
               link.entity ? (
@@ -225,8 +349,19 @@ export default function LoreArticlePage() {
               ) : null,
             )}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-xs text-muted-foreground">No connected entities</p>
+        )}
+      </div>
+
+      {/* Change History */}
+      <div className="mt-6">
+        <HistorySection
+          projectSlug={params.slug}
+          targetModel="LoreArticle"
+          targetId={article.id}
+        />
+      </div>
     </div>
   );
 }
