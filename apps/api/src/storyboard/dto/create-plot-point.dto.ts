@@ -35,4 +35,9 @@ export class CreatePlotPointDto implements CreatePlotPointRequest {
   @IsOptional()
   @IsString()
   entitySlug?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  locationSlug?: string;
 }

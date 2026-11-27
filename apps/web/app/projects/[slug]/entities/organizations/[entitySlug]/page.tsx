@@ -25,7 +25,8 @@ import {
   mergeRelationships,
 } from "../../_components/entity-sections";
 import { HistorySection } from "@/components/history-section";
-import { Users, Pencil, Save, X, Trash2 } from "lucide-react";
+import { Combobox } from "@loreum/ui/combobox";
+import { Users, Pencil, Save, X, Trash2, Plus } from "lucide-react";
 
 interface OrgMember {
   character: { entity: { id: string; name: string; slug: string } };
@@ -84,6 +85,13 @@ interface EntityHub {
   entityTags: { tag: { id: string; name: string; color: string | null } }[];
 }
 
+interface CharacterListItem {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+}
+
 const STATUS_OPTIONS = ["active", "dissolved", "underground", "emerging"];
 const TYPE_ROUTE: Record<string, string> = {
   CHARACTER: "entities/characters",
@@ -112,6 +120,17 @@ export default function OrganizationDetailPage() {
   const [editStatus, setEditStatus] = useState("");
   const [editTerritory, setEditTerritory] = useState("");
   const [editIdeology, setEditIdeology] = useState("");
+
+  const [characters, setCharacters] = useState<CharacterListItem[]>([]);
+  const [addMemberSlug, setAddMemberSlug] = useState("");
+  const [addMemberRole, setAddMemberRole] = useState("");
+  const [addingMember, setAddingMember] = useState(false);
+
+  useEffect(() => {
+    api<CharacterListItem[]>(`/projects/${params.slug}/entities?type=CHARACTER`)
+      .then(setCharacters)
+      .catch(() => {});
+  }, [params.slug]);
 
   useEffect(() => {
     api<EntityHub>(`/projects/${params.slug}/entities/${params.entitySlug}`)
@@ -188,6 +207,45 @@ export default function OrganizationDetailPage() {
       router.push(`/projects/${params.slug}/entities/organizations`);
     } catch {
       setError("Failed to delete");
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!entity || !addMemberSlug) return;
+    setAddingMember(true);
+    setError(null);
+    try {
+      const updated = await api<EntityHub>(
+        `/projects/${params.slug}/entities/${entity.slug}/members`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            characterSlug: addMemberSlug,
+            role: addMemberRole.trim() || undefined,
+          }),
+        },
+      );
+      setEntity(updated);
+      setAddMemberSlug("");
+      setAddMemberRole("");
+    } catch {
+      setError("Failed to add member");
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (characterSlug: string) => {
+    if (!entity) return;
+    setError(null);
+    try {
+      await api(
+        `/projects/${params.slug}/entities/${entity.slug}/members/${characterSlug}`,
+        { method: "DELETE" },
+      );
+      setReloadKey((k) => k + 1);
+    } catch {
+      setError("Failed to remove member");
     }
   };
 
@@ -375,36 +433,85 @@ export default function OrganizationDetailPage() {
           )
         )}
 
-        {members.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Users className="h-4 w-4" />
-                Members ({members.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4" />
+              Members{members.length > 0 && ` (${members.length})`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {members.length > 0 && (
+              <div className="mb-4 space-y-1">
                 {members.map((m) => (
-                  <Link
+                  <div
                     key={m.character.entity.id}
-                    href={`/projects/${params.slug}/entities/characters/${m.character.entity.slug}`}
                     className="flex items-center justify-between rounded-md p-2 text-sm hover:bg-muted"
                   >
-                    <span className="font-medium">
+                    <Link
+                      href={`/projects/${params.slug}/entities/characters/${m.character.entity.slug}`}
+                      className="font-medium hover:underline"
+                    >
                       {m.character.entity.name}
-                    </span>
-                    {m.role && (
-                      <span className="text-xs text-muted-foreground">
-                        {m.role}
-                      </span>
-                    )}
-                  </Link>
+                    </Link>
+                    <div className="flex items-center gap-2">
+                      {m.role && (
+                        <span className="text-xs text-muted-foreground">
+                          {m.role}
+                        </span>
+                      )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={() =>
+                          handleRemoveMember(m.character.entity.slug)
+                        }
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+            <div className="flex items-end gap-2">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs">Character</Label>
+                <Combobox
+                  options={characters
+                    .filter(
+                      (c) =>
+                        !members.some(
+                          (m) => m.character.entity.slug === c.slug,
+                        ),
+                    )
+                    .map((c) => ({ value: c.slug, label: c.name }))}
+                  value={addMemberSlug}
+                  onValueChange={setAddMemberSlug}
+                  placeholder="Select character..."
+                  searchPlaceholder="Search characters..."
+                />
+              </div>
+              <div className="w-36 space-y-1">
+                <Label className="text-xs">Role</Label>
+                <Input
+                  value={addMemberRole}
+                  onChange={(e) => setAddMemberRole(e.target.value)}
+                  placeholder="e.g. Leader"
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={handleAddMember}
+                disabled={!addMemberSlug || addingMember}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                Add
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <RichTextSection
           title="Description"

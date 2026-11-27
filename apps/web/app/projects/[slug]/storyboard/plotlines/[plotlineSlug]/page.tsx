@@ -28,6 +28,7 @@ interface PlotPoint {
   scene: { id: string; title: string | null } | null;
   timelineEvent: { id: string; name: string; date: string } | null;
   entity: { id: string; name: string; slug: string; type: string } | null;
+  location: { id: string; name: string; slug: string; type: string } | null;
 }
 
 interface Plotline {
@@ -46,6 +47,7 @@ interface EntityOption {
   id: string;
   name: string;
   slug: string;
+  type: string;
 }
 
 interface TimelineOption {
@@ -86,6 +88,7 @@ export default function PlotlineDetailPage() {
   const [newPointDescription, setNewPointDescription] = useState("");
   const [newPointLabel, setNewPointLabel] = useState("");
   const [newPointEntitySlug, setNewPointEntitySlug] = useState("");
+  const [newPointLocationSlug, setNewPointLocationSlug] = useState("");
   const [newPointTimelineEventId, setNewPointTimelineEventId] = useState("");
   const [creatingPoint, setCreatingPoint] = useState(false);
 
@@ -95,6 +98,7 @@ export default function PlotlineDetailPage() {
   const [editPointDescription, setEditPointDescription] = useState("");
   const [editPointLabel, setEditPointLabel] = useState("");
   const [editPointEntitySlug, setEditPointEntitySlug] = useState("");
+  const [editPointLocationSlug, setEditPointLocationSlug] = useState("");
   const [editPointTimelineEventId, setEditPointTimelineEventId] = useState("");
 
   // Reference data for dropdowns
@@ -117,6 +121,8 @@ export default function PlotlineDetailPage() {
       .then(setTimelineEvents)
       .catch(() => {});
   }, [params.slug, params.plotlineSlug]);
+
+  const locations = entities.filter((e) => e.type === "LOCATION");
 
   const startEditing = () => {
     if (!plotline) return;
@@ -187,6 +193,7 @@ export default function PlotlineDetailPage() {
             description: newPointDescription.trim() || undefined,
             label: newPointLabel || undefined,
             entitySlug: newPointEntitySlug || undefined,
+            locationSlug: newPointLocationSlug || undefined,
             timelineEventId: newPointTimelineEventId || undefined,
             sequenceNumber: plotline.plotPoints.length + 1,
           }),
@@ -200,6 +207,7 @@ export default function PlotlineDetailPage() {
       setNewPointDescription("");
       setNewPointLabel("");
       setNewPointEntitySlug("");
+      setNewPointLocationSlug("");
       setNewPointTimelineEventId("");
       setAddingPoint(false);
     } catch {
@@ -215,6 +223,7 @@ export default function PlotlineDetailPage() {
     setEditPointDescription(point.description ?? "");
     setEditPointLabel(point.label ?? "");
     setEditPointEntitySlug(point.entity?.slug ?? "");
+    setEditPointLocationSlug(point.location?.slug ?? "");
     setEditPointTimelineEventId(point.timelineEvent?.id ?? "");
   };
 
@@ -230,6 +239,7 @@ export default function PlotlineDetailPage() {
             description: editPointDescription.trim() || null,
             label: editPointLabel || null,
             entitySlug: editPointEntitySlug || null,
+            locationSlug: editPointLocationSlug || null,
             timelineEventId: editPointTimelineEventId || null,
           }),
         },
@@ -461,19 +471,34 @@ export default function PlotlineDetailPage() {
                         />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Timeline Event</Label>
-                      <Combobox
-                        options={timelineEvents.map((e) => ({
-                          value: e.id,
-                          label: e.name,
-                          sublabel: e.date,
-                        }))}
-                        value={editPointTimelineEventId}
-                        onValueChange={setEditPointTimelineEventId}
-                        placeholder="Link a timeline event..."
-                        searchPlaceholder="Search events..."
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Location</Label>
+                        <Combobox
+                          options={locations.map((e) => ({
+                            value: e.slug,
+                            label: e.name,
+                          }))}
+                          value={editPointLocationSlug}
+                          onValueChange={setEditPointLocationSlug}
+                          placeholder="Link a location..."
+                          searchPlaceholder="Search locations..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Timeline Event</Label>
+                        <Combobox
+                          options={timelineEvents.map((e) => ({
+                            value: e.id,
+                            label: e.name,
+                            sublabel: e.date,
+                          }))}
+                          value={editPointTimelineEventId}
+                          onValueChange={setEditPointTimelineEventId}
+                          placeholder="Link a timeline event..."
+                          searchPlaceholder="Search events..."
+                        />
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -522,6 +547,14 @@ export default function PlotlineDetailPage() {
                             className="hover:underline"
                           >
                             {point.entity.name}
+                          </Link>
+                        )}
+                        {point.location && (
+                          <Link
+                            href={`/projects/${params.slug}/entities/locations/${point.location.slug}`}
+                            className="hover:underline"
+                          >
+                            {point.location.name}
                           </Link>
                         )}
                         {point.timelineEvent && (
@@ -608,19 +641,34 @@ export default function PlotlineDetailPage() {
                     />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Timeline Event</Label>
-                  <Combobox
-                    options={timelineEvents.map((e) => ({
-                      value: e.id,
-                      label: e.name,
-                      sublabel: e.date,
-                    }))}
-                    value={newPointTimelineEventId}
-                    onValueChange={setNewPointTimelineEventId}
-                    placeholder="Link a timeline event..."
-                    searchPlaceholder="Search events..."
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Location</Label>
+                    <Combobox
+                      options={locations.map((e) => ({
+                        value: e.slug,
+                        label: e.name,
+                      }))}
+                      value={newPointLocationSlug}
+                      onValueChange={setNewPointLocationSlug}
+                      placeholder="Link a location..."
+                      searchPlaceholder="Search locations..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Timeline Event</Label>
+                    <Combobox
+                      options={timelineEvents.map((e) => ({
+                        value: e.id,
+                        label: e.name,
+                        sublabel: e.date,
+                      }))}
+                      value={newPointTimelineEventId}
+                      onValueChange={setNewPointTimelineEventId}
+                      placeholder="Link a timeline event..."
+                      searchPlaceholder="Search events..."
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -639,6 +687,7 @@ export default function PlotlineDetailPage() {
                       setNewPointDescription("");
                       setNewPointLabel("");
                       setNewPointEntitySlug("");
+                      setNewPointLocationSlug("");
                       setNewPointTimelineEventId("");
                     }}
                   >

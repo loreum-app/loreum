@@ -60,13 +60,14 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 
 - [x] Scenes: multi-character picker (SceneCharacter join table exists, no UI)
 - [x] Scenes: timeline event link in create/edit forms
-- [ ] Plot points: support multiple entities (separate pickers for Characters, Locations, Orgs, item types)
+- [x] Plot points: location picker (uses existing `locationId` FK)
+- [ ] Plot points: multi-entity support via join table (currently single entity + single location)
 
 #### Entities
 
 - [ ] Configurable field schemas for Characters, Locations, Organizations (same pattern as Items - add `fieldSchema` JSON column). Hardcoded fields become defaults. Enables RPG stats (STR, DEX, etc.), custom attributes per project
-- [ ] Create entity dialog: add secrets, notes fields
-- [ ] Organization member management UI (OrgMember table exists, no UI)
+- [x] Create entity dialog: add description, secrets, notes fields
+- [x] Organization member management UI (add/remove members with role)
 
 #### Lore
 

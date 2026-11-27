@@ -20,6 +20,7 @@ import { EntitiesService } from "./entities.service";
 import { auditContextFromUser } from "../audit/audit.types";
 import { CreateEntityDto } from "./dto/create-entity.dto";
 import { UpdateEntityDto } from "./dto/update-entity.dto";
+import { AddOrgMemberDto } from "./dto/add-org-member.dto";
 
 @ApiTags("Entities")
 @Controller("projects/:projectSlug/entities")
@@ -103,6 +104,42 @@ export class EntitiesController {
     return this.entitiesService.delete(
       project.id,
       slug,
+      auditContextFromUser(user),
+    );
+  }
+
+  @Post(":slug/members")
+  @ApiOperation({ summary: "Add a character as an organization member" })
+  async addOrgMember(
+    @Param("projectSlug") projectSlug: string,
+    @User() user: AuthUser,
+    @Param("slug") slug: string,
+    @Body() dto: AddOrgMemberDto,
+  ) {
+    const project = await this.projectsService.findBySlug(projectSlug, user.id);
+    return this.entitiesService.addOrgMember(
+      project.id,
+      slug,
+      dto.characterSlug,
+      dto.role,
+      auditContextFromUser(user),
+    );
+  }
+
+  @Delete(":slug/members/:characterSlug")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Remove a character from an organization" })
+  async removeOrgMember(
+    @Param("projectSlug") projectSlug: string,
+    @User() user: AuthUser,
+    @Param("slug") slug: string,
+    @Param("characterSlug") characterSlug: string,
+  ) {
+    const project = await this.projectsService.findBySlug(projectSlug, user.id);
+    await this.entitiesService.removeOrgMember(
+      project.id,
+      slug,
+      characterSlug,
       auditContextFromUser(user),
     );
   }

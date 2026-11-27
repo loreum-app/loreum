@@ -22,6 +22,7 @@ const plotPointInclude = {
   scene: { select: { id: true, title: true } },
   timelineEvent: { select: { id: true, name: true, date: true } },
   entity: { select: { id: true, name: true, slug: true, type: true } },
+  location: { select: { id: true, name: true, slug: true, type: true } },
 };
 
 @Injectable()
@@ -233,6 +234,14 @@ export class StoryboardService {
       if (entity) entityId = entity.id;
     }
 
+    let locationId: string | undefined;
+    if (dto.locationSlug) {
+      const location = await this.prisma.entity.findFirst({
+        where: { projectId, slug: dto.locationSlug },
+      });
+      if (location) locationId = location.id;
+    }
+
     const created = await this.prisma.plotPoint.create({
       data: {
         plotlineId: plotline.id,
@@ -243,6 +252,7 @@ export class StoryboardService {
         sceneId: dto.sceneId,
         timelineEventId: dto.timelineEventId,
         entityId,
+        locationId,
       },
       include: plotPointInclude,
     });
@@ -298,6 +308,17 @@ export class StoryboardService {
           where: { projectId, slug: dto.entitySlug },
         });
         data.entityId = entity?.id ?? null;
+      }
+    }
+
+    if (dto.locationSlug !== undefined) {
+      if (dto.locationSlug === null) {
+        data.locationId = null;
+      } else {
+        const location = await this.prisma.entity.findFirst({
+          where: { projectId, slug: dto.locationSlug },
+        });
+        data.locationId = location?.id ?? null;
       }
     }
 

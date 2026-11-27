@@ -449,6 +449,122 @@ export class EntitiesService {
     }
   }
 
+  async addOrgMember(
+    projectId: string,
+    orgSlug: string,
+    characterSlug: string,
+    role?: string,
+    audit?: AuditContext,
+  ) {
+    const org = await this.findBySlug(projectId, orgSlug);
+    if (org.type !== "ORGANIZATION") {
+      throw new NotFoundException("Entity is not an organization");
+    }
+
+    const character = await this.findBySlug(projectId, characterSlug);
+    if (character.type !== "CHARACTER") {
+      throw new NotFoundException("Entity is not a character");
+    }
+
+    const existing = await this.prisma.orgMember.findUnique({
+      where: {
+        characterId_organizationId: {
+          characterId: character.id,
+          organizationId: org.id,
+        },
+      },
+    });
+    if (existing) {
+      throw new ConflictException("Character is already a member");
+    }
+
+    await this.prisma.orgMember.create({
+      data: {
+        characterId: character.id,
+        organizationId: org.id,
+        role: role || null,
+      },
+    });
+
+    const result = await this.prisma.entity.findUniqueOrThrow({
+      where: { id: org.id },
+      include: hubInclude,
+    });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "Entity",
+        targetId: org.id,
+        afterData: { action: "addMember", character: character.name, role },
+        actor: audit,
+      });
+    }
+
+    return result;
+  }
+
+  async removeOrgMember(
+    projectId: string,
+    orgSlug: string,
+    characterSlug: string,
+    audit?: AuditContext,
+  ) {
+    const org = await this.findBySlug(projectId, orgSlug);
+    if (org.type !== "ORGANIZATION") {
+      throw new NotFoundException("Entity is not an organization");
+    }
+
+    const character = await this.findBySlug(projectId, characterSlug);
+    if (character.type !== "CHARACTER") {
+      throw new NotFoundException("Entity is not a character");
+    }
+
+    const member = await this.prisma.orgMember.findUnique({
+      where: {
+        characterId_organizationId: {
+          characterId: character.id,
+          organizationId: org.id,
+        },
+      },
+    });
+    if (!member) {
+      throw new NotFoundException("Character is not a member");
+    }
+
+    await this.prisma.orgMember.delete({
+      where: {
+        characterId_organizationId: {
+          characterId: character.id,
+          organizationId: org.id,
+        },
+      },
+    });
+
+    const result = await this.prisma.entity.findUniqueOrThrow({
+      where: { id: org.id },
+      include: hubInclude,
+    });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "Entity",
+        targetId: org.id,
+        beforeData: {
+          action: "removeMember",
+          character: character.name,
+          role: member.role,
+        },
+        actor: audit,
+      });
+    }
+
+    return result;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic snapshot for JSON column
   private snapshot(entity: any): object {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally stripping internal fields

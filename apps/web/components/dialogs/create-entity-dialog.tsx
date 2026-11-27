@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@loreum/ui/select";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 type EntityType = "CHARACTER" | "LOCATION" | "ORGANIZATION" | "ITEM";
 
@@ -80,6 +81,10 @@ export function CreateEntityDialog({
   const [type, setType] = useState<EntityType>(defaultType ?? "CHARACTER");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showMore, setShowMore] = useState(false);
+  const [description, setDescription] = useState("");
+  const [secrets, setSecrets] = useState("");
+  const [notes, setNotes] = useState("");
 
   // Character fields
   const [charStatus, setCharStatus] = useState("");
@@ -108,6 +113,10 @@ export function CreateEntityDialog({
     setOrgStatus("");
     setOrgTerritory("");
     setOrgIdeology("");
+    setDescription("");
+    setSecrets("");
+    setNotes("");
+    setShowMore(false);
     setError(null);
   };
 
@@ -122,6 +131,9 @@ export function CreateEntityDialog({
       type,
       name: name.trim(),
       summary: summary.trim() || undefined,
+      description: description.trim() || undefined,
+      secrets: secrets.trim() || undefined,
+      notes: notes.trim() || undefined,
     };
 
     if (type === "CHARACTER") {
@@ -229,6 +241,54 @@ export function CreateEntityDialog({
                 rows={2}
               />
             </div>
+
+            <button
+              type="button"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setShowMore((v) => !v)}
+            >
+              {showMore ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )}
+              {showMore ? "Less" : "More details"}
+            </button>
+
+            {showMore && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="ent-desc">Description</Label>
+                  <Textarea
+                    id="ent-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Detailed description..."
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ent-secrets">Secrets</Label>
+                  <Textarea
+                    id="ent-secrets"
+                    value={secrets}
+                    onChange={(e) => setSecrets(e.target.value)}
+                    placeholder="Hidden information..."
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ent-notes">Notes</Label>
+                  <Textarea
+                    id="ent-notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Personal notes..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Character-specific fields */}
             {type === "CHARACTER" && (
