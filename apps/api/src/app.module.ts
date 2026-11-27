@@ -19,6 +19,7 @@ import { RelationshipsModule } from "./relationships/relationships.module";
 import { TimelineModule } from "./timeline/timeline.module";
 import { LoreModule } from "./lore/lore.module";
 import { StoryboardModule } from "./storyboard/storyboard.module";
+import { StyleGuideModule } from "./style-guide/style-guide.module";
 import { McpModule } from "./mcp/mcp.module";
 import { AuditModule } from "./audit/audit.module";
 import { AppController } from "./app.controller";
@@ -55,6 +56,7 @@ import { AppController } from "./app.controller";
     TimelineModule,
     LoreModule,
     StoryboardModule,
+    StyleGuideModule,
     SearchModule,
     McpModule,
     AuditModule,

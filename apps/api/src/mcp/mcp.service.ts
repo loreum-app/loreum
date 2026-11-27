@@ -19,6 +19,7 @@ import { TimelineService } from "../timeline/timeline.service";
 import { ErasService } from "../timeline/eras.service";
 import { TagsService } from "../tags/tags.service";
 import { SearchService } from "../search/search.service";
+import { StyleGuideService } from "../style-guide/style-guide.service";
 import { AppConfig } from "../config/app.config";
 import { McpAuthContext } from "../oauth/oauth.types";
 import { mcpContextFromAuthInfo } from "./mcp-auth.guard";
@@ -32,6 +33,7 @@ import { registerRelationshipTools } from "./tools/relationship.tools";
 import { registerLoreTools } from "./tools/lore.tools";
 import { registerTimelineTools } from "./tools/timeline.tools";
 import { registerStoryboardTools } from "./tools/storyboard.tools";
+import { registerStyleGuideTools } from "./tools/style-guide.tools";
 import { registerChatGptTools } from "./tools/chatgpt.tools";
 
 export const MCP_SERVER_NAME = "loreum";
@@ -64,6 +66,7 @@ export class McpService implements OnModuleInit, OnModuleDestroy {
     private erasService: ErasService,
     private tagsService: TagsService,
     private searchService: SearchService,
+    private styleGuideService: StyleGuideService,
     private config: AppConfig,
   ) {}
 
@@ -141,6 +144,7 @@ export class McpService implements OnModuleInit, OnModuleDestroy {
       projects: this.projectsService,
       entityTypes: this.entityTypesService,
     });
+    registerStyleGuideTools(reg, ctx, this.styleGuideService);
     registerEntityTools(reg, ctx, this.entitiesService);
     registerRelationshipTools(reg, ctx, this.relationshipsService);
     registerLoreTools(reg, ctx, this.loreService);

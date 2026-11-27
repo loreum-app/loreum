@@ -12,3 +12,4 @@ export * from "./storyboard";
 export * from "./search";
 export * from "./graph";
 export * from "./notifications";
+export * from "./style-guide";
