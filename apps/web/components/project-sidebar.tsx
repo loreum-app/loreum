@@ -49,6 +49,7 @@ import {
   Check,
   X,
   Settings,
+  History,
   MoreHorizontal,
   PackageOpen,
   Pencil,
@@ -372,6 +373,17 @@ export function ProjectSidebar({
       {/* Outside SidebarContent so it stays reachable when the nav overflows. */}
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={isActive("history")}
+              render={
+                <Link href={`${basePath}/history`} onClick={handleNavClick} />
+              }
+            >
+              <History className="h-4 w-4" />
+              History
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={isActive("settings")}

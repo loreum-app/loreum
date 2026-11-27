@@ -8,6 +8,7 @@ export type Feature = "mcp" | "api_keys" | "public_wiki";
 export interface PlanLimits {
   /** null = unlimited */
   maxProjects: number | null;
+  maxLedgerEntries: number;
 }
 
 /**
@@ -21,9 +22,9 @@ export const PLAN_FEATURES: Record<Plan, Record<Feature, boolean>> = {
 };
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  FREE: { maxProjects: 1 },
-  PRO: { maxProjects: null },
-  TEAM: { maxProjects: null },
+  FREE: { maxProjects: 1, maxLedgerEntries: 500 },
+  PRO: { maxProjects: null, maxLedgerEntries: 5_000 },
+  TEAM: { maxProjects: null, maxLedgerEntries: 50_000 },
 };
 
 /** The plan everyone is treated as while billing is disabled. */

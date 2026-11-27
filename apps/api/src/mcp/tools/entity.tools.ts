@@ -3,6 +3,7 @@ import { EntitiesService } from "../../entities/entities.service";
 import { CreateEntityDto } from "../../entities/dto/create-entity.dto";
 import { UpdateEntityDto } from "../../entities/dto/update-entity.dto";
 import { McpAuthContext } from "../../oauth/oauth.types";
+import { auditContextFromMcp } from "../../audit/audit.types";
 import { ToolRegistrar, slugArg, textResult } from "../tool-utils";
 
 const ENTITY_TYPES = ["CHARACTER", "LOCATION", "ORGANIZATION", "ITEM"] as const;
@@ -190,6 +191,7 @@ export function registerEntityTools(
       const created = await entities.create(
         ctx.projectId,
         input as CreateEntityDto,
+        auditContextFromMcp(ctx),
       );
       return shapeEntity(created);
     },
@@ -214,6 +216,7 @@ export function registerEntityTools(
         ctx.projectId,
         entitySlug,
         updates as UpdateEntityDto,
+        auditContextFromMcp(ctx),
       );
       const { entityTags, ...rest } = updated;
       return { ...rest, tags: entityTags.map((t) => t.tag.name) };
@@ -232,7 +235,11 @@ export function registerEntityTools(
       input: z.object({ entitySlug: slugArg("entity") }),
     },
     async ({ entitySlug }) => {
-      await entities.delete(ctx.projectId, entitySlug);
+      await entities.delete(
+        ctx.projectId,
+        entitySlug,
+        auditContextFromMcp(ctx),
+      );
       return textResult(`Deleted entity "${entitySlug}".`);
     },
   );

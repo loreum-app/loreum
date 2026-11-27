@@ -17,6 +17,7 @@ import { User } from "../auth/decorators/user.decorator";
 import { AuthUser } from "../auth/types/jwt.types";
 import { ProjectsService } from "../projects/projects.service";
 import { RelationshipsService } from "./relationships.service";
+import { auditContextFromUser } from "../audit/audit.types";
 import { CreateRelationshipDto } from "./dto/create-relationship.dto";
 import { UpdateRelationshipDto } from "./dto/update-relationship.dto";
 
@@ -38,7 +39,11 @@ export class RelationshipsController {
     @Body() dto: CreateRelationshipDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.relationshipsService.create(project.id, dto);
+    return this.relationshipsService.create(
+      project.id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Get()
@@ -74,7 +79,12 @@ export class RelationshipsController {
     @Body() dto: UpdateRelationshipDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.relationshipsService.update(project.id, id, dto);
+    return this.relationshipsService.update(
+      project.id,
+      id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete(":id")
@@ -86,6 +96,10 @@ export class RelationshipsController {
     @Param("id") id: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.relationshipsService.delete(project.id, id);
+    return this.relationshipsService.delete(
+      project.id,
+      id,
+      auditContextFromUser(user),
+    );
   }
 }

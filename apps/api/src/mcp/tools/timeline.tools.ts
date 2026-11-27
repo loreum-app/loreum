@@ -5,6 +5,7 @@ import { CreateTimelineEventDto } from "../../timeline/dto/create-timeline-event
 import { UpdateTimelineEventDto } from "../../timeline/dto/update-timeline-event.dto";
 import { CreateEraDto } from "../../timeline/dto/create-era.dto";
 import { McpAuthContext } from "../../oauth/oauth.types";
+import { auditContextFromMcp } from "../../audit/audit.types";
 import { ToolRegistrar, idArg, slugArg, textResult } from "../tool-utils";
 
 const SIGNIFICANCE = ["minor", "moderate", "major", "critical"] as const;
@@ -133,10 +134,14 @@ export function registerTimelineTools(
       const sortOrder =
         input.sortOrder ?? (existing.at(-1)?.sortOrder ?? 0) + 1;
       return shapeEvent(
-        await deps.timeline.create(ctx.projectId, {
-          ...input,
-          sortOrder,
-        } as CreateTimelineEventDto),
+        await deps.timeline.create(
+          ctx.projectId,
+          {
+            ...input,
+            sortOrder,
+          } as CreateTimelineEventDto,
+          auditContextFromMcp(ctx),
+        ),
       );
     },
   );
@@ -161,6 +166,7 @@ export function registerTimelineTools(
           ctx.projectId,
           eventId,
           updates as UpdateTimelineEventDto,
+          auditContextFromMcp(ctx),
         ),
       ),
   );
@@ -177,7 +183,11 @@ export function registerTimelineTools(
       input: z.object({ eventId: idArg("timeline event") }),
     },
     async ({ eventId }) => {
-      await deps.timeline.delete(ctx.projectId, eventId);
+      await deps.timeline.delete(
+        ctx.projectId,
+        eventId,
+        auditContextFromMcp(ctx),
+      );
       return textResult(`Deleted timeline event ${eventId}.`);
     },
   );
@@ -207,6 +217,11 @@ export function registerTimelineTools(
         sortOrder: z.number().int().optional(),
       }),
     },
-    async (input) => deps.eras.create(ctx.projectId, input as CreateEraDto),
+    async (input) =>
+      deps.eras.create(
+        ctx.projectId,
+        input as CreateEraDto,
+        auditContextFromMcp(ctx),
+      ),
   );
 }

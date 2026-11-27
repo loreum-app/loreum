@@ -17,6 +17,7 @@ import { User } from "../auth/decorators/user.decorator";
 import { AuthUser } from "../auth/types/jwt.types";
 import { ProjectsService } from "../projects/projects.service";
 import { EntitiesService } from "./entities.service";
+import { auditContextFromUser } from "../audit/audit.types";
 import { CreateEntityDto } from "./dto/create-entity.dto";
 import { UpdateEntityDto } from "./dto/update-entity.dto";
 
@@ -38,7 +39,11 @@ export class EntitiesController {
     @Body() dto: CreateEntityDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.entitiesService.create(project.id, dto);
+    return this.entitiesService.create(
+      project.id,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Get()
@@ -78,7 +83,12 @@ export class EntitiesController {
     @Body() dto: UpdateEntityDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.entitiesService.update(project.id, slug, dto);
+    return this.entitiesService.update(
+      project.id,
+      slug,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete(":slug")
@@ -90,6 +100,10 @@ export class EntitiesController {
     @Param("slug") slug: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.entitiesService.delete(project.id, slug);
+    return this.entitiesService.delete(
+      project.id,
+      slug,
+      auditContextFromUser(user),
+    );
   }
 }

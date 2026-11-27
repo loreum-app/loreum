@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateTimelineEventDto } from './dto/create-timeline-event.dto';
-import { UpdateTimelineEventDto } from './dto/update-timeline-event.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { AuditLedgerService } from "../audit/audit-ledger.service";
+import { AuditContext } from "../audit/audit.types";
+import { CreateTimelineEventDto } from "./dto/create-timeline-event.dto";
+import { UpdateTimelineEventDto } from "./dto/update-timeline-event.dto";
 
 const eventInclude = {
   entities: {
@@ -21,13 +23,20 @@ const eventInclude = {
 
 @Injectable()
 export class TimelineService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditLedger: AuditLedgerService,
+  ) {}
 
-  async create(projectId: string, dto: CreateTimelineEventDto) {
+  async create(
+    projectId: string,
+    dto: CreateTimelineEventDto,
+    audit?: AuditContext,
+  ) {
     const entityIds = await this.resolveEntitySlugs(projectId, dto.entitySlugs);
     const eraId = await this.resolveEraSlug(projectId, dto.eraSlug);
 
-    return this.prisma.timelineEvent.create({
+    const created = await this.prisma.timelineEvent.create({
       data: {
         projectId,
         name: dto.name,
@@ -39,7 +48,7 @@ export class TimelineService {
         sortOrder: dto.sortOrder,
         periodStart: dto.periodStart,
         periodEnd: dto.periodEnd,
-        significance: dto.significance ?? 'moderate',
+        significance: dto.significance ?? "moderate",
         eraId,
         entities: {
           create: entityIds.map((entityId) => ({ entityId })),
@@ -47,6 +56,19 @@ export class TimelineService {
       },
       include: eventInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "TimelineEvent",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
   async findAllByProject(
@@ -67,7 +89,7 @@ export class TimelineService {
 
     return this.prisma.timelineEvent.findMany({
       where,
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: "asc" },
       include: eventInclude,
     });
   }
@@ -79,14 +101,20 @@ export class TimelineService {
     });
 
     if (!event) {
-      throw new NotFoundException('Timeline event not found');
+      throw new NotFoundException("Timeline event not found");
     }
 
     return event;
   }
 
-  async update(projectId: string, id: string, dto: UpdateTimelineEventDto) {
+  async update(
+    projectId: string,
+    id: string,
+    dto: UpdateTimelineEventDto,
+    audit?: AuditContext,
+  ) {
     const event = await this.findById(projectId, id);
+    const beforeSnapshot = audit ? this.snapshot(event) : undefined;
 
     const data: Record<string, unknown> = {};
     if (dto.name !== undefined) data.name = dto.name;
@@ -115,19 +143,63 @@ export class TimelineService {
       };
     }
 
-    return this.prisma.timelineEvent.update({
+    const updated = await this.prisma.timelineEvent.update({
       where: { id: event.id },
       data,
       include: eventInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "TimelineEvent",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
-  async delete(projectId: string, id: string) {
+  async delete(projectId: string, id: string, audit?: AuditContext) {
     const event = await this.findById(projectId, id);
+    const beforeSnapshot = audit ? this.snapshot(event) : undefined;
 
     await this.prisma.timelineEvent.delete({
       where: { id: event.id },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "TimelineEvent",
+        targetId: event.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic snapshot for JSON column
+  private snapshot(event: any): object {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally stripping internal fields
+    const { projectId, createdAt, ...rest } = event;
+    const clean = { ...rest };
+    if (clean.entities) {
+      clean.entitySlugs = clean.entities
+        .map((e: { entity?: { slug?: string } }) => e.entity?.slug)
+        .filter(Boolean);
+      delete clean.entities;
+    }
+    if (clean.era) {
+      clean.eraSlug = clean.era.slug;
+      delete clean.era;
+    }
+    return clean;
   }
 
   private async resolveEraSlug(

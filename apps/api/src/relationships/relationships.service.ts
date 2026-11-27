@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { AuditLedgerService } from "../audit/audit-ledger.service";
+import { AuditContext } from "../audit/audit.types";
 import { EntitiesService } from "../entities/entities.service";
 import { CreateRelationshipDto } from "./dto/create-relationship.dto";
 import { UpdateRelationshipDto } from "./dto/update-relationship.dto";
@@ -27,10 +29,15 @@ const entityInclude = {
 export class RelationshipsService {
   constructor(
     private prisma: PrismaService,
+    private auditLedger: AuditLedgerService,
     private entitiesService: EntitiesService,
   ) {}
 
-  async create(projectId: string, dto: CreateRelationshipDto) {
+  async create(
+    projectId: string,
+    dto: CreateRelationshipDto,
+    audit?: AuditContext,
+  ) {
     const source = await this.entitiesService.findBySlug(
       projectId,
       dto.sourceEntitySlug,
@@ -40,7 +47,7 @@ export class RelationshipsService {
       dto.targetEntitySlug,
     );
 
-    return this.prisma.relationship.create({
+    const created = await this.prisma.relationship.create({
       data: {
         projectId,
         sourceEntityId: source.id,
@@ -53,6 +60,19 @@ export class RelationshipsService {
       },
       include: entityInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "Relationship",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
   async findAllByProject(projectId: string, filters?: { entity?: string }) {
@@ -85,8 +105,14 @@ export class RelationshipsService {
     return relationship;
   }
 
-  async update(projectId: string, id: string, dto: UpdateRelationshipDto) {
+  async update(
+    projectId: string,
+    id: string,
+    dto: UpdateRelationshipDto,
+    audit?: AuditContext,
+  ) {
     const relationship = await this.findById(projectId, id);
+    const beforeSnapshot = audit ? this.snapshot(relationship) : undefined;
 
     const data: Record<string, unknown> = {};
     if (dto.label !== undefined) data.label = dto.label;
@@ -94,18 +120,51 @@ export class RelationshipsService {
     if (dto.bidirectional !== undefined) data.bidirectional = dto.bidirectional;
     if (dto.metadata !== undefined) data.metadata = dto.metadata;
 
-    return this.prisma.relationship.update({
+    const updated = await this.prisma.relationship.update({
       where: { id: relationship.id },
       data,
       include: entityInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "Relationship",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
-  async delete(projectId: string, id: string) {
+  async delete(projectId: string, id: string, audit?: AuditContext) {
     const relationship = await this.findById(projectId, id);
+    const beforeSnapshot = audit ? this.snapshot(relationship) : undefined;
 
     await this.prisma.relationship.delete({
       where: { id: relationship.id },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "Relationship",
+        targetId: relationship.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic snapshot for JSON column
+  private snapshot(record: any): object {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally stripping internal fields
+    const { projectId, createdAt, ...rest } = record;
+    return rest;
   }
 }

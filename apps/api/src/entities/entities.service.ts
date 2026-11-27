@@ -5,6 +5,8 @@ import {
 } from "@nestjs/common";
 import { EntityType, Prisma } from "../../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { AuditLedgerService } from "../audit/audit-ledger.service";
+import { AuditContext } from "../audit/audit.types";
 import { CreateEntityDto } from "./dto/create-entity.dto";
 import { UpdateEntityDto } from "./dto/update-entity.dto";
 import { generateUniqueSlug } from "../common/utils/slug";
@@ -79,7 +81,10 @@ const hubInclude = {
 
 @Injectable()
 export class EntitiesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditLedger: AuditLedgerService,
+  ) {}
 
   private async assertReferences(
     projectId: string,
@@ -126,7 +131,7 @@ export class EntitiesService {
     }
   }
 
-  async create(projectId: string, dto: CreateEntityDto) {
+  async create(projectId: string, dto: CreateEntityDto, audit?: AuditContext) {
     await this.assertReferences(projectId, dto);
     await this.assertNameAvailable(
       projectId,
@@ -194,10 +199,23 @@ export class EntitiesService {
       });
     }
 
-    return this.prisma.entity.findUniqueOrThrow({
+    const created = await this.prisma.entity.findUniqueOrThrow({
       where: { id: entity.id },
       include: listInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "Entity",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
   /** Resolve tag names to ids, creating tags that do not exist yet. */
@@ -283,8 +301,14 @@ export class EntitiesService {
     return entity;
   }
 
-  async update(projectId: string, slug: string, dto: UpdateEntityDto) {
+  async update(
+    projectId: string,
+    slug: string,
+    dto: UpdateEntityDto,
+    audit?: AuditContext,
+  ) {
     const entity = await this.findBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(entity) : undefined;
     await this.assertReferences(projectId, dto);
 
     const data: Record<string, unknown> = {};
@@ -385,17 +409,57 @@ export class EntitiesService {
       });
     }
 
-    return this.prisma.entity.findUniqueOrThrow({
+    const result = await this.prisma.entity.findUniqueOrThrow({
       where: { id: updated.id },
       include: hubInclude,
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "Entity",
+        targetId: result.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(result),
+        actor: audit,
+      });
+    }
+
+    return result;
   }
 
-  async delete(projectId: string, slug: string) {
+  async delete(projectId: string, slug: string, audit?: AuditContext) {
     const entity = await this.findBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(entity) : undefined;
 
     await this.prisma.entity.delete({
       where: { id: entity.id },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "Entity",
+        targetId: entity.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic snapshot for JSON column
+  private snapshot(entity: any): object {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally stripping internal fields
+    const { projectId, searchVector, createdAt, updatedAt, ...rest } = entity;
+    const clean = { ...rest };
+    if (clean.entityTags) {
+      clean.tags = clean.entityTags
+        .map((et: { tag?: { name?: string } }) => et.tag?.name)
+        .filter(Boolean);
+      delete clean.entityTags;
+    }
+    return clean;
   }
 }

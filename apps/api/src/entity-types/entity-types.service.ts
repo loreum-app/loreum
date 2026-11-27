@@ -5,18 +5,27 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { AuditLedgerService } from "../audit/audit-ledger.service";
+import { AuditContext } from "../audit/audit.types";
 import { CreateEntityTypeDto } from "./dto/create-entity-type.dto";
 import { UpdateEntityTypeDto } from "./dto/update-entity-type.dto";
 import { slugify } from "../common/utils/slug";
 
 @Injectable()
 export class EntityTypesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditLedger: AuditLedgerService,
+  ) {}
 
-  async create(projectId: string, dto: CreateEntityTypeDto) {
+  async create(
+    projectId: string,
+    dto: CreateEntityTypeDto,
+    audit?: AuditContext,
+  ) {
     const slug = await this.generateUniqueSlug(projectId, dto.name);
 
-    return this.prisma.itemType.create({
+    const created = await this.prisma.itemType.create({
       data: {
         projectId,
         name: dto.name,
@@ -27,6 +36,19 @@ export class EntityTypesService {
         fieldSchema: dto.fieldSchema?.map((f) => ({ ...f })) ?? [],
       },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "CREATE",
+        targetModel: "ItemType",
+        targetId: created.id,
+        afterData: this.snapshot(created),
+        actor: audit,
+      });
+    }
+
+    return created;
   }
 
   async findAllByProject(projectId: string) {
@@ -50,8 +72,14 @@ export class EntityTypesService {
     return itemType;
   }
 
-  async update(projectId: string, slug: string, dto: UpdateEntityTypeDto) {
+  async update(
+    projectId: string,
+    slug: string,
+    dto: UpdateEntityTypeDto,
+    audit?: AuditContext,
+  ) {
     const itemType = await this.findBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(itemType) : undefined;
 
     const data: Record<string, unknown> = {};
     if (dto.description !== undefined)
@@ -70,11 +98,25 @@ export class EntityTypesService {
       );
     }
 
-    return this.prisma.itemType.update({
+    const updated = await this.prisma.itemType.update({
       where: { id: itemType.id },
       data,
       include: { _count: { select: { items: true } } },
     });
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "UPDATE",
+        targetModel: "ItemType",
+        targetId: updated.id,
+        beforeData: beforeSnapshot,
+        afterData: this.snapshot(updated),
+        actor: audit,
+      });
+    }
+
+    return updated;
   }
 
   /**
@@ -149,12 +191,25 @@ export class EntityTypesService {
     projectId: string,
     slug: string,
     disposition?: { entities?: "move" | "delete"; to?: string },
+    audit?: AuditContext,
   ) {
     const itemType = await this.findBySlug(projectId, slug);
+    const beforeSnapshot = audit ? this.snapshot(itemType) : undefined;
     const count = itemType._count.items;
 
     if (count === 0) {
       await this.prisma.itemType.delete({ where: { id: itemType.id } });
+
+      if (audit) {
+        await this.auditLedger.append({
+          projectId,
+          operation: "DELETE",
+          targetModel: "ItemType",
+          targetId: itemType.id,
+          beforeData: beforeSnapshot,
+          actor: audit,
+        });
+      }
       return;
     }
 
@@ -186,6 +241,17 @@ export class EntityTypesService {
         }),
         this.prisma.itemType.delete({ where: { id: itemType.id } }),
       ]);
+
+      if (audit) {
+        await this.auditLedger.append({
+          projectId,
+          operation: "DELETE",
+          targetModel: "ItemType",
+          targetId: itemType.id,
+          beforeData: beforeSnapshot,
+          actor: audit,
+        });
+      }
       return;
     }
 
@@ -202,6 +268,24 @@ export class EntityTypesService {
       this.prisma.entity.deleteMany({ where: { id: { in: entityIds } } }),
       this.prisma.itemType.delete({ where: { id: itemType.id } }),
     ]);
+
+    if (audit) {
+      await this.auditLedger.append({
+        projectId,
+        operation: "DELETE",
+        targetModel: "ItemType",
+        targetId: itemType.id,
+        beforeData: beforeSnapshot,
+        actor: audit,
+      });
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic snapshot for JSON column
+  private snapshot(record: any): object {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally stripping internal fields
+    const { projectId, createdAt, updatedAt, _count, ...rest } = record;
+    return rest;
   }
 
   private async generateUniqueSlug(

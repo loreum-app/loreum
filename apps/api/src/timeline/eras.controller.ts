@@ -16,6 +16,7 @@ import { User } from "../auth/decorators/user.decorator";
 import { AuthUser } from "../auth/types/jwt.types";
 import { ProjectsService } from "../projects/projects.service";
 import { ErasService } from "./eras.service";
+import { auditContextFromUser } from "../audit/audit.types";
 import { CreateEraDto } from "./dto/create-era.dto";
 import { UpdateEraDto } from "./dto/update-era.dto";
 
@@ -37,7 +38,7 @@ export class ErasController {
     @Body() dto: CreateEraDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.erasService.create(project.id, dto);
+    return this.erasService.create(project.id, dto, auditContextFromUser(user));
   }
 
   @Get()
@@ -70,7 +71,12 @@ export class ErasController {
     @Body() dto: UpdateEraDto,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.erasService.update(project.id, slug, dto);
+    return this.erasService.update(
+      project.id,
+      slug,
+      dto,
+      auditContextFromUser(user),
+    );
   }
 
   @Delete(":slug")
@@ -82,6 +88,10 @@ export class ErasController {
     @Param("slug") slug: string,
   ) {
     const project = await this.projectsService.findBySlug(projectSlug, user.id);
-    return this.erasService.delete(project.id, slug);
+    return this.erasService.delete(
+      project.id,
+      slug,
+      auditContextFromUser(user),
+    );
   }
 }
