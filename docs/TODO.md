@@ -99,13 +99,13 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 
 ### Style Guide
 
-- [ ] Add `StyleGuide` model to Prisma schema (one per project, structured text fields)
-- [ ] Add `voiceNotes` field to `Character` extension
-- [ ] Add `styleNotes` field to `Scene` model
-- [ ] Prisma migration
-- [ ] Style guide service + controller (GET/PUT `/projects/:slug/style-guide`)
-- [ ] MCP tool: `get_style_guide` - read tool (blocked on style guide model/service/controller)
-- [ ] MCP tool: `set_style_guide` - write tool (blocked on style guide model/service/controller)
+- [x] Add `StyleGuide` model to Prisma schema (one per project, structured text fields)
+- [x] Add `voiceNotes` field to `Character` extension
+- [x] Add `styleNotes` field to `Scene` model
+- [x] Prisma migration
+- [x] Style guide service + controller (GET/PUT `/projects/:slug/style-guide`)
+- [x] MCP tool: `get_style_guide` - read tool
+- [x] MCP tool: `update_style_guide` - write tool
 - [ ] Style guide wizard UI (step-by-step: dropdowns for POV/tense/voice/tone, text areas for rules/examples)
 - [ ] Style guide editor UI (full form view, accessible after wizard or directly)
 - [ ] Trigger wizard on project creation (optional) + accessible from style guide page any time
