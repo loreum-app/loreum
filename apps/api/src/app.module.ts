@@ -14,6 +14,7 @@ import { QueueModule } from "./queue/queue.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { EntityTypesModule } from "./entity-types/entity-types.module";
 import { EntitiesModule } from "./entities/entities.module";
+import { EntityFieldSchemasModule } from "./entity-field-schemas/entity-field-schemas.module";
 import { TagsModule } from "./tags/tags.module";
 import { RelationshipsModule } from "./relationships/relationships.module";
 import { TimelineModule } from "./timeline/timeline.module";
@@ -51,6 +52,7 @@ import { AppController } from "./app.controller";
     ProjectsModule,
     EntityTypesModule,
     EntitiesModule,
+    EntityFieldSchemasModule,
     TagsModule,
     RelationshipsModule,
     TimelineModule,

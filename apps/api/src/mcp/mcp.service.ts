@@ -11,6 +11,7 @@ import { toNodeHandler } from "@modelcontextprotocol/node";
 import type { NodeMcpRequestHandler } from "@modelcontextprotocol/node";
 import { ProjectsService } from "../projects/projects.service";
 import { EntitiesService } from "../entities/entities.service";
+import { EntityFieldSchemasService } from "../entity-field-schemas/entity-field-schemas.service";
 import { EntityTypesService } from "../entity-types/entity-types.service";
 import { StoryboardService } from "../storyboard/storyboard.service";
 import { RelationshipsService } from "../relationships/relationships.service";
@@ -58,6 +59,7 @@ export class McpService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private projectsService: ProjectsService,
     private entitiesService: EntitiesService,
+    private entityFieldSchemasService: EntityFieldSchemasService,
     private entityTypesService: EntityTypesService,
     private storyboardService: StoryboardService,
     private relationshipsService: RelationshipsService,
@@ -145,7 +147,12 @@ export class McpService implements OnModuleInit, OnModuleDestroy {
       entityTypes: this.entityTypesService,
     });
     registerStyleGuideTools(reg, ctx, this.styleGuideService);
-    registerEntityTools(reg, ctx, this.entitiesService);
+    registerEntityTools(
+      reg,
+      ctx,
+      this.entitiesService,
+      this.entityFieldSchemasService,
+    );
     registerRelationshipTools(reg, ctx, this.relationshipsService);
     registerLoreTools(reg, ctx, this.loreService);
     registerTimelineTools(reg, ctx, {

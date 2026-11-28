@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { EntitiesService } from "../../entities/entities.service";
+import { EntityFieldSchemasService } from "../../entity-field-schemas/entity-field-schemas.service";
 import { CreateEntityDto } from "../../entities/dto/create-entity.dto";
 import { UpdateEntityDto } from "../../entities/dto/update-entity.dto";
 import { McpAuthContext } from "../../oauth/oauth.types";
@@ -7,6 +8,13 @@ import { auditContextFromMcp } from "../../audit/audit.types";
 import { ToolRegistrar, slugArg, textResult } from "../tool-utils";
 
 const ENTITY_TYPES = ["CHARACTER", "LOCATION", "ORGANIZATION", "ITEM"] as const;
+
+const customFieldsSchema = z
+  .record(z.string(), z.unknown())
+  .optional()
+  .describe(
+    "Values for project-defined custom fields (get_entity_field_schema to see the schema)",
+  );
 
 const characterFields = z
   .object({
@@ -17,6 +25,7 @@ const characterFields = z
       .string()
       .optional()
       .describe("e.g. protagonist, antagonist, supporting, minor"),
+    customFields: customFieldsSchema,
   })
   .optional()
   .describe("Character-only fields (type CHARACTER)");
@@ -28,6 +37,7 @@ const locationFields = z
       .string()
       .optional()
       .describe("e.g. ruins, functional, fortified, contested"),
+    customFields: customFieldsSchema,
   })
   .optional()
   .describe("Location-only fields (type LOCATION)");
@@ -44,6 +54,7 @@ const organizationFields = z
       .string()
       .optional()
       .describe("Entity id of the parent organization"),
+    customFields: customFieldsSchema,
   })
   .optional()
   .describe("Organization-only fields (type ORGANIZATION)");
@@ -98,10 +109,17 @@ function shapeEntity<T extends { entityTags?: { tag: { name: string } }[] }>(
   return { ...rest, tags: entityTags?.map((t) => t.tag.name) ?? [] };
 }
 
+const CONFIGURABLE_ENTITY_TYPES = [
+  "CHARACTER",
+  "LOCATION",
+  "ORGANIZATION",
+] as const;
+
 export function registerEntityTools(
   reg: ToolRegistrar,
   ctx: McpAuthContext,
   entities: EntitiesService,
+  entityFieldSchemas?: EntityFieldSchemasService,
 ) {
   reg.tool(
     "list_entities",
@@ -243,4 +261,79 @@ export function registerEntityTools(
       return textResult(`Deleted entity "${entitySlug}".`);
     },
   );
+
+  // ── Entity field schema tools ──
+
+  if (entityFieldSchemas) {
+    reg.tool(
+      "get_entity_field_schema",
+      {
+        title: "Get entity field schema",
+        description:
+          "Get the custom field schema defined for a built-in entity type (CHARACTER, LOCATION, or ORGANIZATION). Returns an array of field definitions that describe what custom fields exist for entities of this type in the current project.",
+        access: "read",
+        input: z.object({
+          entityType: z
+            .enum(CONFIGURABLE_ENTITY_TYPES)
+            .describe("The built-in entity type"),
+        }),
+      },
+      async ({ entityType }) => {
+        return entityFieldSchemas.getSchema(ctx.projectId, entityType);
+      },
+    );
+
+    reg.tool(
+      "update_entity_field_schema",
+      {
+        title: "Update entity field schema",
+        description:
+          "Create or replace the custom field schema for a built-in entity type (CHARACTER, LOCATION, or ORGANIZATION). Each field definition has: key, label, type (text/textarea/number/boolean/select/multi_select/date/url/entity_ref), and optional options (for select/multi_select), required, description.",
+        access: "write",
+        idempotent: true,
+        input: z.object({
+          entityType: z
+            .enum(CONFIGURABLE_ENTITY_TYPES)
+            .describe("The built-in entity type"),
+          fieldSchema: z
+            .array(
+              z.object({
+                key: z.string().min(1).describe("Unique field identifier"),
+                label: z.string().min(1).describe("Display label"),
+                type: z
+                  .enum([
+                    "text",
+                    "textarea",
+                    "number",
+                    "boolean",
+                    "select",
+                    "multi_select",
+                    "date",
+                    "url",
+                    "entity_ref",
+                  ])
+                  .describe("Field type"),
+                options: z
+                  .array(z.string())
+                  .optional()
+                  .describe("Options for select/multi_select fields"),
+                required: z.boolean().optional(),
+                description: z.string().optional(),
+              }),
+            )
+            .describe("The complete field schema (replaces existing)"),
+        }),
+      },
+      async ({ entityType, fieldSchema }) => {
+        await entityFieldSchemas.upsertSchema(
+          ctx.projectId,
+          entityType,
+          fieldSchema,
+        );
+        return textResult(
+          `Updated custom field schema for ${entityType} with ${fieldSchema.length} field(s).`,
+        );
+      },
+    );
+  }
 }

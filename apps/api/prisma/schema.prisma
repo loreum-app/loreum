@@ -168,6 +168,9 @@ model Project {
   // Style guide
   styleGuide StyleGuide?
 
+  // Custom field schemas for built-in entity types
+  entityFieldSchemas EntityFieldSchema[]
+
   // MCP
   apiKeys        ApiKey[]
   ledgerEntries  LedgerEntry[]
@@ -227,12 +230,13 @@ model Entity {
 // ── Extension tables ──
 
 model Character {
-  entityId   String  @id
-  status     String? // alive, deceased, unknown, dormant, distributed
-  species    String? // human, synth, ai, hybrid
-  age        String?
-  role       String? // protagonist, antagonist, deuteragonist, supporting, minor
-  voiceNotes String? @db.Text
+  entityId     String @id
+  status       String? // alive, deceased, unknown, dormant, distributed
+  species      String? // human, synth, ai, hybrid
+  age          String?
+  role         String? // protagonist, antagonist, deuteragonist, supporting, minor
+  voiceNotes   String? @db.Text
+  customFields Json   @default("{}")
 
   entity         Entity      @relation(fields: [entityId], references: [id], onDelete: Cascade)
   orgMemberships OrgMember[]
@@ -241,12 +245,13 @@ model Character {
 }
 
 model Location {
-  entityId  String  @id
-  mapId     String?
-  x         Float?
-  y         Float?
-  region    String?
-  condition String? // ruins, partially_restored, functional, fortified, overgrown, contested
+  entityId     String @id
+  mapId        String?
+  x            Float?
+  y            Float?
+  region       String?
+  condition    String? // ruins, partially_restored, functional, fortified, overgrown, contested
+  customFields Json   @default("{}")
 
   entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
   map    Map?   @relation(fields: [mapId], references: [id], onDelete: SetNull)
@@ -255,11 +260,12 @@ model Location {
 }
 
 model Organization {
-  entityId    String  @id
-  parentOrgId String?
-  ideology    String? @db.Text
-  territory   String?
-  status      String? // active, dissolved, underground, emerging
+  entityId     String @id
+  parentOrgId  String?
+  ideology     String? @db.Text
+  territory    String?
+  status       String? // active, dissolved, underground, emerging
+  customFields Json   @default("{}")
 
   entity    Entity         @relation(fields: [entityId], references: [id], onDelete: Cascade)
   parentOrg Organization?  @relation("OrgHierarchy", fields: [parentOrgId], references: [entityId], onDelete: SetNull)
@@ -310,6 +316,22 @@ model ItemType {
 
   @@unique([projectId, slug])
   @@map("item_types")
+}
+
+// ── Entity Field Schemas (custom fields per built-in type) ──
+
+model EntityFieldSchema {
+  projectId   String
+  entityType  EntityType
+  fieldSchema Json       @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, entityType])
+  @@map("entity_field_schemas")
 }
 
 // ── Relationships ──

@@ -164,21 +164,45 @@ export class EntitiesService {
 
     // Create extension record
     switch (dto.type) {
-      case "CHARACTER":
+      case "CHARACTER": {
+        const { customFields: charCf, ...charRest } = dto.character ?? {};
         await this.prisma.character.create({
-          data: { entityId: entity.id, ...dto.character },
+          data: {
+            entityId: entity.id,
+            ...charRest,
+            ...(charCf !== undefined
+              ? { customFields: charCf as Prisma.InputJsonValue }
+              : {}),
+          },
         });
         break;
-      case "LOCATION":
+      }
+      case "LOCATION": {
+        const { customFields: locCf, ...locRest } = dto.location ?? {};
         await this.prisma.location.create({
-          data: { entityId: entity.id, ...dto.location },
+          data: {
+            entityId: entity.id,
+            ...locRest,
+            ...(locCf !== undefined
+              ? { customFields: locCf as Prisma.InputJsonValue }
+              : {}),
+          },
         });
         break;
-      case "ORGANIZATION":
+      }
+      case "ORGANIZATION": {
+        const { customFields: orgCf, ...orgRest } = dto.organization ?? {};
         await this.prisma.organization.create({
-          data: { entityId: entity.id, ...dto.organization },
+          data: {
+            entityId: entity.id,
+            ...orgRest,
+            ...(orgCf !== undefined
+              ? { customFields: orgCf as Prisma.InputJsonValue }
+              : {}),
+          },
         });
         break;
+      }
       case "ITEM":
         await this.prisma.item.create({
           data: {
@@ -370,24 +394,45 @@ export class EntitiesService {
 
     // Extension table upserts
     if (dto.character) {
+      const { customFields: charCf, ...charRest } = dto.character;
+      const charData = {
+        ...charRest,
+        ...(charCf !== undefined
+          ? { customFields: charCf as Prisma.InputJsonValue }
+          : {}),
+      };
       await this.prisma.character.upsert({
         where: { entityId: entity.id },
-        create: { entityId: entity.id, ...dto.character },
-        update: dto.character,
+        create: { entityId: entity.id, ...charData },
+        update: charData,
       });
     }
     if (dto.location) {
+      const { customFields: locCf, ...locRest } = dto.location;
+      const locData = {
+        ...locRest,
+        ...(locCf !== undefined
+          ? { customFields: locCf as Prisma.InputJsonValue }
+          : {}),
+      };
       await this.prisma.location.upsert({
         where: { entityId: entity.id },
-        create: { entityId: entity.id, ...dto.location },
-        update: dto.location,
+        create: { entityId: entity.id, ...locData },
+        update: locData,
       });
     }
     if (dto.organization) {
+      const { customFields: orgCf, ...orgRest } = dto.organization;
+      const orgData = {
+        ...orgRest,
+        ...(orgCf !== undefined
+          ? { customFields: orgCf as Prisma.InputJsonValue }
+          : {}),
+      };
       await this.prisma.organization.upsert({
         where: { entityId: entity.id },
-        create: { entityId: entity.id, ...dto.organization },
-        update: dto.organization,
+        create: { entityId: entity.id, ...orgData },
+        update: orgData,
       });
     }
     if (dto.item) {

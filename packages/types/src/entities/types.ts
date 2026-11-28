@@ -1,16 +1,18 @@
-import type { EntityType } from '../entity-types';
+import type { EntityType } from "../entity-types";
 
 export interface Character {
   status: string | null;
   species: string | null;
   age: string | null;
   role: string | null;
+  customFields?: Record<string, unknown>;
 }
 
 export interface Location {
   region: string | null;
   condition: string | null;
   mapId: string | null;
+  customFields?: Record<string, unknown>;
 }
 
 export interface Organization {
@@ -18,6 +20,7 @@ export interface Organization {
   territory: string | null;
   status: string | null;
   parentOrgId: string | null;
+  customFields?: Record<string, unknown>;
 }
 
 export interface Item {
@@ -46,10 +49,10 @@ export interface Entity {
 }
 
 export interface EntityHub extends Entity {
-  relationships: import('../relationships').Relationship[];
-  incomingRelationships: import('../relationships').Relationship[];
-  scenes: import('../storyboard').SceneSummary[];
-  loreArticles: import('../lore').LoreArticleSummary[];
-  timelineEvents: import('../timeline').TimelineEvent[];
-  tags: import('../tags').Tag[];
+  relationships: import("../relationships").Relationship[];
+  incomingRelationships: import("../relationships").Relationship[];
+  scenes: import("../storyboard").SceneSummary[];
+  loreArticles: import("../lore").LoreArticleSummary[];
+  timelineEvents: import("../timeline").TimelineEvent[];
+  tags: import("../tags").Tag[];
 }

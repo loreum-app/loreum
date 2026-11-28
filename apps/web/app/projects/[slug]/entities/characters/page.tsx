@@ -7,7 +7,8 @@ import { api } from "@/lib/api";
 import { Button } from "@loreum/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@loreum/ui/card";
 import { CreateEntityDialog } from "@/components/dialogs/create-entity-dialog";
-import { Plus, Users } from "lucide-react";
+import { EntityFieldSchemaDialog } from "@/components/dialogs/entity-field-schema-dialog";
+import { Plus, Users, Settings } from "lucide-react";
 import type { Entity } from "@loreum/types";
 
 export default function CharactersPage() {
@@ -15,6 +16,7 @@ export default function CharactersPage() {
   const [characters, setCharacters] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [schemaDialogOpen, setSchemaDialogOpen] = useState(false);
 
   useEffect(() => {
     api<Entity[]>(`/projects/${params.slug}/entities?type=CHARACTER`)
@@ -47,10 +49,20 @@ export default function CharactersPage() {
             The people, AIs, and beings in your world
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-1 h-4 w-4" />
-          New character
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSchemaDialogOpen(true)}
+            title="Configure custom fields"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-1 h-4 w-4" />
+            New character
+          </Button>
+        </div>
       </div>
 
       {characters.length === 0 ? (
@@ -94,6 +106,14 @@ export default function CharactersPage() {
         projectSlug={params.slug}
         defaultType="CHARACTER"
         onCreated={handleCreated}
+      />
+
+      <EntityFieldSchemaDialog
+        open={schemaDialogOpen}
+        onOpenChange={setSchemaDialogOpen}
+        projectSlug={params.slug}
+        entityType="CHARACTER"
+        entityTypeLabel="Characters"
       />
     </div>
   );

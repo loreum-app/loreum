@@ -21,6 +21,12 @@ export interface FieldDefinition {
 
 export type EntityType = "CHARACTER" | "LOCATION" | "ORGANIZATION" | "ITEM";
 
+export interface EntityFieldSchema {
+  projectId: string;
+  entityType: EntityType;
+  fieldSchema: FieldDefinition[];
+}
+
 export interface ItemType {
   id: string;
   projectId: string;

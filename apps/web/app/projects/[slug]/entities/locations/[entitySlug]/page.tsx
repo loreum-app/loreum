@@ -3,17 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { Button } from "@loreum/ui/button";
-import { Input } from "@loreum/ui/input";
-import { Label } from "@loreum/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@loreum/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@loreum/ui/select";
 import {
   EntityTags,
   RelationshipsSection,
@@ -22,9 +11,14 @@ import {
   RichTextSection,
   mergeRelationships,
 } from "../../_components/entity-sections";
+import { CustomFieldsSection } from "../../_components/custom-fields-section";
 import { HistorySection } from "@/components/history-section";
+import { DetailPageHeader } from "@/components/detail-page-header";
+import {
+  EntityFieldsCard,
+  type FieldConfig,
+} from "@/components/entity-fields-card";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { Pencil, Save, X, Trash2 } from "lucide-react";
 
 interface EntityHub {
   id: string;
@@ -41,6 +35,7 @@ interface EntityHub {
     region: string | null;
     condition: string | null;
     mapId: string | null;
+    customFields?: Record<string, unknown>;
   } | null;
   sourceRelationships: {
     id: string;
@@ -83,6 +78,26 @@ const CONDITION_OPTIONS = [
   "overgrown",
   "contested",
 ];
+const LOCATION_FIELDS: FieldConfig[] = [
+  {
+    key: "region",
+    label: "Region",
+    type: "text",
+    placeholder: "e.g. Pacific Northwest",
+  },
+  {
+    key: "condition",
+    label: "Condition",
+    type: "select",
+    capitalize: true,
+    options: CONDITION_OPTIONS.map((o) => ({
+      value: o,
+      label: o.replace(/_/g, " "),
+    })),
+    placeholder: "Select condition",
+  },
+];
+
 const TYPE_ROUTE: Record<string, string> = {
   CHARACTER: "entities/characters",
   LOCATION: "entities/locations",
@@ -109,6 +124,9 @@ export default function LocationDetailPage() {
   const [editNotes, setEditNotes] = useState("");
   const [editRegion, setEditRegion] = useState("");
   const [editCondition, setEditCondition] = useState("");
+  const [editCustomFields, setEditCustomFields] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     api<EntityHub>(`/projects/${params.slug}/entities/${params.entitySlug}`)
@@ -135,6 +153,12 @@ export default function LocationDetailPage() {
     setEditNotes(entity.notes ?? "");
     setEditRegion(entity.location?.region ?? "");
     setEditCondition(entity.location?.condition ?? "");
+    const cf = entity.location?.customFields ?? {};
+    setEditCustomFields(
+      Object.fromEntries(
+        Object.entries(cf).map(([k, v]) => [k, String(v ?? "")]),
+      ),
+    );
     setEditing(true);
   };
 
@@ -157,6 +181,7 @@ export default function LocationDetailPage() {
             location: {
               region: editRegion.trim() || null,
               condition: editCondition || null,
+              customFields: editCustomFields,
             },
           }),
         },
@@ -219,53 +244,23 @@ export default function LocationDetailPage() {
           { label: entity.name },
         ]}
       />
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex gap-2">
-            {editing ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setEditing(false);
-                    setError(null);
-                  }}
-                >
-                  <X className="mr-1 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={saving}>
-                  <Save className="mr-1 h-4 w-4" />
-                  {saving ? "Saving..." : "Save"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button size="sm" variant="outline" onClick={startEditing}>
-                  <Pencil className="mr-1 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button size="sm" variant="destructive" onClick={handleDelete}>
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  Delete
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-        {editing ? (
-          <Input
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            className="text-3xl"
-          />
-        ) : (
-          <h1>{entity.name}</h1>
-        )}
+      <DetailPageHeader
+        name={entity.name}
+        editName={editName}
+        onEditNameChange={setEditName}
+        editing={editing}
+        saving={saving}
+        onEdit={startEditing}
+        onSave={handleSave}
+        onCancel={() => {
+          setEditing(false);
+          setError(null);
+        }}
+        onDelete={handleDelete}
+        error={error}
+      >
         <EntityTags tags={entity.entityTags} />
-        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-      </div>
+      </DetailPageHeader>
 
       <div className="space-y-6">
         <RichTextSection
@@ -279,70 +274,32 @@ export default function LocationDetailPage() {
           isSummary
         />
 
-        {editing ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Location Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label>Region</Label>
-                  <Input
-                    value={editRegion}
-                    onChange={(e) => setEditRegion(e.target.value)}
-                    placeholder="e.g. Pacific Northwest"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Condition</Label>
-                  <Select
-                    value={editCondition}
-                    onValueChange={(v) => v && setEditCondition(v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select condition" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CONDITION_OPTIONS.map((o) => (
-                        <SelectItem key={o} value={o}>
-                          {o.replace(/_/g, " ")}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          entity.location &&
-          (entity.location.region || entity.location.condition) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Location Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  {entity.location.region && (
-                    <div>
-                      <dt className="text-muted-foreground">Region</dt>
-                      <dd className="font-medium">{entity.location.region}</dd>
-                    </div>
-                  )}
-                  {entity.location.condition && (
-                    <div>
-                      <dt className="text-muted-foreground">Condition</dt>
-                      <dd className="font-medium capitalize">
-                        {entity.location.condition.replace(/_/g, " ")}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </CardContent>
-            </Card>
-          )
-        )}
+        <EntityFieldsCard
+          title="Location Details"
+          fields={LOCATION_FIELDS}
+          values={
+            editing
+              ? { region: editRegion, condition: editCondition }
+              : {
+                  region: entity.location?.region,
+                  condition: entity.location?.condition,
+                }
+          }
+          editing={editing}
+          onChange={(key, value) => {
+            if (key === "region") setEditRegion(value);
+            if (key === "condition") setEditCondition(value);
+          }}
+        />
+
+        <CustomFieldsSection
+          projectSlug={params.slug}
+          entityType="LOCATION"
+          customFields={entity.location?.customFields ?? {}}
+          editing={editing}
+          editCustomFields={editCustomFields}
+          onEditCustomFieldsChange={setEditCustomFields}
+        />
 
         <RichTextSection
           title="Description"

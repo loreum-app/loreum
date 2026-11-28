@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ProjectsModule } from "../projects/projects.module";
 import { EntitiesModule } from "../entities/entities.module";
+import { EntityFieldSchemasModule } from "../entity-field-schemas/entity-field-schemas.module";
 import { EntityTypesModule } from "../entity-types/entity-types.module";
 import { StoryboardModule } from "../storyboard/storyboard.module";
 import { RelationshipsModule } from "../relationships/relationships.module";
@@ -19,6 +20,7 @@ import { McpAccessLogMiddleware } from "./mcp-access-log.middleware";
   imports: [
     ProjectsModule,
     EntitiesModule,
+    EntityFieldSchemasModule,
     EntityTypesModule,
     StoryboardModule,
     RelationshipsModule,

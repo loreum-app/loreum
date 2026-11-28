@@ -6,12 +6,14 @@ export interface CharacterFields {
   age?: string;
   role?: string;
   voiceNotes?: string;
+  customFields?: Record<string, unknown>;
 }
 
 export interface LocationFields {
   region?: string;
   condition?: string;
   mapId?: string;
+  customFields?: Record<string, unknown>;
 }
 
 export interface OrganizationFields {
@@ -19,6 +21,7 @@ export interface OrganizationFields {
   territory?: string;
   status?: string;
   parentOrgId?: string;
+  customFields?: Record<string, unknown>;
 }
 
 export interface ItemFields {
