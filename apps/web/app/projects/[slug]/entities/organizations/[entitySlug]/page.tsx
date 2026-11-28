@@ -24,10 +24,12 @@ import {
   RichTextSection,
   mergeRelationships,
 } from "../../_components/entity-sections";
+import { CustomFieldsSection } from "../../_components/custom-fields-section";
 import { HistorySection } from "@/components/history-section";
+import { DetailPageHeader } from "@/components/detail-page-header";
 import { Combobox } from "@loreum/ui/combobox";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { Users, Pencil, Save, X, Trash2, Plus } from "lucide-react";
+import { Users, X, Plus } from "lucide-react";
 
 interface OrgMember {
   character: { entity: { id: string; name: string; slug: string } };
@@ -52,6 +54,7 @@ interface EntityHub {
     parentOrgId: string | null;
     parentOrg: { entity: { name: string; slug: string } } | null;
     members: OrgMember[];
+    customFields?: Record<string, unknown>;
   } | null;
   sourceRelationships: {
     id: string;
@@ -121,6 +124,9 @@ export default function OrganizationDetailPage() {
   const [editStatus, setEditStatus] = useState("");
   const [editTerritory, setEditTerritory] = useState("");
   const [editIdeology, setEditIdeology] = useState("");
+  const [editCustomFields, setEditCustomFields] = useState<
+    Record<string, string>
+  >({});
 
   const [characters, setCharacters] = useState<CharacterListItem[]>([]);
   const [addMemberSlug, setAddMemberSlug] = useState("");
@@ -159,6 +165,12 @@ export default function OrganizationDetailPage() {
     setEditStatus(entity.organization?.status ?? "");
     setEditTerritory(entity.organization?.territory ?? "");
     setEditIdeology(entity.organization?.ideology ?? "");
+    const cf = entity.organization?.customFields ?? {};
+    setEditCustomFields(
+      Object.fromEntries(
+        Object.entries(cf).map(([k, v]) => [k, String(v ?? "")]),
+      ),
+    );
     setEditing(true);
   };
 
@@ -182,6 +194,7 @@ export default function OrganizationDetailPage() {
               status: editStatus || null,
               territory: editTerritory.trim() || null,
               ideology: editIdeology.trim() || null,
+              customFields: editCustomFields,
             },
           }),
         },
@@ -284,53 +297,23 @@ export default function OrganizationDetailPage() {
           { label: entity.name },
         ]}
       />
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex gap-2">
-            {editing ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setEditing(false);
-                    setError(null);
-                  }}
-                >
-                  <X className="mr-1 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={saving}>
-                  <Save className="mr-1 h-4 w-4" />
-                  {saving ? "Saving..." : "Save"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button size="sm" variant="outline" onClick={startEditing}>
-                  <Pencil className="mr-1 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button size="sm" variant="destructive" onClick={handleDelete}>
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  Delete
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-        {editing ? (
-          <Input
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            className="text-3xl"
-          />
-        ) : (
-          <h1>{entity.name}</h1>
-        )}
+      <DetailPageHeader
+        name={entity.name}
+        editName={editName}
+        onEditNameChange={setEditName}
+        editing={editing}
+        saving={saving}
+        onEdit={startEditing}
+        onSave={handleSave}
+        onCancel={() => {
+          setEditing(false);
+          setError(null);
+        }}
+        onDelete={handleDelete}
+        error={error}
+      >
         <EntityTags tags={entity.entityTags} />
-        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-      </div>
+      </DetailPageHeader>
 
       <div className="space-y-6">
         <RichTextSection
@@ -350,7 +333,7 @@ export default function OrganizationDetailPage() {
               <CardTitle className="text-base">Organization Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label>Status</Label>
                   <Select
@@ -377,7 +360,7 @@ export default function OrganizationDetailPage() {
                     placeholder="Territory description"
                   />
                 </div>
-                <div className="col-span-2 space-y-1">
+                <div className="col-span-1 sm:col-span-2 space-y-1">
                   <Label>Ideology</Label>
                   <Textarea
                     value={editIdeology}
@@ -398,7 +381,7 @@ export default function OrganizationDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                   {entity.organization.status && (
                     <div>
                       <dt className="text-muted-foreground">Status</dt>
@@ -525,6 +508,15 @@ export default function OrganizationDetailPage() {
             </div>
           </CardContent>
         </Card>
+
+        <CustomFieldsSection
+          projectSlug={params.slug}
+          entityType="ORGANIZATION"
+          customFields={entity.organization?.customFields ?? {}}
+          editing={editing}
+          editCustomFields={editCustomFields}
+          onEditCustomFieldsChange={setEditCustomFields}
+        />
 
         <RichTextSection
           title="Description"

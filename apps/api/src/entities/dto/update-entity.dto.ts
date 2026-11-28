@@ -18,12 +18,14 @@ class CharacterFieldsDto {
   @IsOptional() @IsString() age?: string;
   @IsOptional() @IsString() role?: string;
   @IsOptional() @IsString() voiceNotes?: string;
+  @IsOptional() @IsObject() customFields?: Record<string, unknown>;
 }
 
 class LocationFieldsDto {
   @IsOptional() @IsString() region?: string;
   @IsOptional() @IsString() condition?: string;
   @IsOptional() @IsString() mapId?: string;
+  @IsOptional() @IsObject() customFields?: Record<string, unknown>;
 }
 
 class OrganizationFieldsDto {
@@ -31,6 +33,7 @@ class OrganizationFieldsDto {
   @IsOptional() @IsString() territory?: string;
   @IsOptional() @IsString() status?: string;
   @IsOptional() @IsString() parentOrgId?: string;
+  @IsOptional() @IsObject() customFields?: Record<string, unknown>;
 }
 
 class ItemFieldsDto {

@@ -50,7 +50,7 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 ### Global Design & Polish
 
 - [x] Global design pass - shared Breadcrumb component, standardized spacing (py-8, max-w-4xl) across all detail pages
-- [ ] Responsive polish (mobile nav, sidebar behavior)
+- [x] Responsive polish — mobile-first grids on all form layouts and detail pages
 - [ ] Screenshot/GIF in README (after UX pass)
 - [ ] Smoke test: login > create project > create entity > view graph > storyboard flow
 
@@ -65,7 +65,7 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 
 #### Entities
 
-- [ ] Configurable field schemas for Characters, Locations, Organizations (same pattern as Items - add `fieldSchema` JSON column). Hardcoded fields become defaults. Enables RPG stats (STR, DEX, etc.), custom attributes per project
+- [x] Configurable field schemas for Characters, Locations, Organizations (EntityFieldSchema model, customFields JSON, field schema editor dialog, MCP tools)
 - [x] Create entity dialog: add description, secrets, notes fields
 - [x] Organization member management UI (add/remove members with role)
 
@@ -77,7 +77,7 @@ Append-only audit ledger replaces the planned review queue. Design: [audit-ledge
 
 #### Architecture
 
-- [ ] Extract detail page content into reusable components for future tabbed/split-pane views
+- [x] Extract detail page content into reusable components (DetailPageHeader, EntityFieldsCard) applied to entity detail pages
 
 ---
 

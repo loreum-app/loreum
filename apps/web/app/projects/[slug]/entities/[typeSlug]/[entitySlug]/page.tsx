@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import { Button } from "@loreum/ui/button";
 import { Input } from "@loreum/ui/input";
 import { Label } from "@loreum/ui/label";
 import {
@@ -23,8 +22,8 @@ import {
   mergeRelationships,
 } from "../../_components/entity-sections";
 import { HistorySection } from "@/components/history-section";
+import { DetailPageHeader } from "@/components/detail-page-header";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { Pencil, Save, X, Trash2 } from "lucide-react";
 
 /** Select needs a non-empty value, so "untyped" stands in for a null type. */
 const UNTYPED_VALUE = "__untyped__";
@@ -269,50 +268,21 @@ export default function ItemDetailPage() {
           { label: entity.name },
         ]}
       />
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex gap-2">
-            {editing ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setEditing(false);
-                    setError(null);
-                  }}
-                >
-                  <X className="mr-1 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={saving}>
-                  <Save className="mr-1 h-4 w-4" />
-                  {saving ? "Saving..." : "Save"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button size="sm" variant="outline" onClick={startEditing}>
-                  <Pencil className="mr-1 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button size="sm" variant="destructive" onClick={handleDelete}>
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  Delete
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-        {editing ? (
-          <Input
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            className="text-3xl"
-          />
-        ) : (
-          <h1>{entity.name}</h1>
-        )}
+      <DetailPageHeader
+        name={entity.name}
+        editName={editName}
+        onEditNameChange={setEditName}
+        editing={editing}
+        saving={saving}
+        onEdit={startEditing}
+        onSave={handleSave}
+        onCancel={() => {
+          setEditing(false);
+          setError(null);
+        }}
+        onDelete={handleDelete}
+        error={error}
+      >
         {editing && (
           <div className="mt-3 max-w-xs space-y-1.5">
             <Label htmlFor="item-type">Type</Label>
@@ -340,8 +310,7 @@ export default function ItemDetailPage() {
           </div>
         )}
         <EntityTags tags={entity.entityTags} />
-        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-      </div>
+      </DetailPageHeader>
 
       <div className="space-y-6">
         <RichTextSection

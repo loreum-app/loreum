@@ -3,17 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { Button } from "@loreum/ui/button";
-import { Input } from "@loreum/ui/input";
-import { Label } from "@loreum/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@loreum/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@loreum/ui/select";
 import {
   EntityTags,
   RelationshipsSection,
@@ -22,9 +11,14 @@ import {
   RichTextSection,
   mergeRelationships,
 } from "../../_components/entity-sections";
+import { CustomFieldsSection } from "../../_components/custom-fields-section";
 import { HistorySection } from "@/components/history-section";
+import { DetailPageHeader } from "@/components/detail-page-header";
+import {
+  EntityFieldsCard,
+  type FieldConfig,
+} from "@/components/entity-fields-card";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { Pencil, Save, X, Trash2 } from "lucide-react";
 
 interface EntityHub {
   id: string;
@@ -43,6 +37,7 @@ interface EntityHub {
     age: string | null;
     role: string | null;
     voiceNotes: string | null;
+    customFields?: Record<string, unknown>;
   } | null;
   sourceRelationships: {
     id: string;
@@ -95,6 +90,39 @@ const ROLE_OPTIONS = [
   "minor",
 ];
 
+const CHARACTER_FIELDS: FieldConfig[] = [
+  {
+    key: "status",
+    label: "Status",
+    type: "select",
+    capitalize: true,
+    options: STATUS_OPTIONS.map((o) => ({ value: o, label: o })),
+    placeholder: "Select status",
+  },
+  {
+    key: "species",
+    label: "Species",
+    type: "select",
+    capitalize: true,
+    options: SPECIES_OPTIONS.map((o) => ({ value: o, label: o })),
+    placeholder: "Select species",
+  },
+  {
+    key: "age",
+    label: "Age",
+    type: "text",
+    placeholder: "Age or age description",
+  },
+  {
+    key: "role",
+    label: "Narrative Role",
+    type: "select",
+    capitalize: true,
+    options: ROLE_OPTIONS.map((o) => ({ value: o, label: o })),
+    placeholder: "Select role",
+  },
+];
+
 const TYPE_ROUTE: Record<string, string> = {
   CHARACTER: "entities/characters",
   LOCATION: "entities/locations",
@@ -124,6 +152,9 @@ export default function CharacterDetailPage() {
   const [editAge, setEditAge] = useState("");
   const [editRole, setEditRole] = useState("");
   const [editVoiceNotes, setEditVoiceNotes] = useState("");
+  const [editCustomFields, setEditCustomFields] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     api<EntityHub>(`/projects/${params.slug}/entities/${params.entitySlug}`)
@@ -153,6 +184,12 @@ export default function CharacterDetailPage() {
     setEditAge(entity.character?.age ?? "");
     setEditRole(entity.character?.role ?? "");
     setEditVoiceNotes(entity.character?.voiceNotes ?? "");
+    const cf = entity.character?.customFields ?? {};
+    setEditCustomFields(
+      Object.fromEntries(
+        Object.entries(cf).map(([k, v]) => [k, String(v ?? "")]),
+      ),
+    );
     setEditing(true);
   };
 
@@ -178,6 +215,7 @@ export default function CharacterDetailPage() {
               age: editAge.trim() || null,
               role: editRole || null,
               voiceNotes: editVoiceNotes.trim() || null,
+              customFields: editCustomFields,
             },
           }),
         },
@@ -241,53 +279,23 @@ export default function CharacterDetailPage() {
           { label: entity.name },
         ]}
       />
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex gap-2">
-            {editing ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setEditing(false);
-                    setError(null);
-                  }}
-                >
-                  <X className="mr-1 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={saving}>
-                  <Save className="mr-1 h-4 w-4" />
-                  {saving ? "Saving..." : "Save"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button size="sm" variant="outline" onClick={startEditing}>
-                  <Pencil className="mr-1 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button size="sm" variant="destructive" onClick={handleDelete}>
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  Delete
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-        {editing ? (
-          <Input
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            className="text-3xl"
-          />
-        ) : (
-          <h1>{entity.name}</h1>
-        )}
+      <DetailPageHeader
+        name={entity.name}
+        editName={editName}
+        onEditNameChange={setEditName}
+        editing={editing}
+        saving={saving}
+        onEdit={startEditing}
+        onSave={handleSave}
+        onCancel={() => {
+          setEditing(false);
+          setError(null);
+        }}
+        onDelete={handleDelete}
+        error={error}
+      >
         <EntityTags tags={entity.entityTags} />
-        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-      </div>
+      </DetailPageHeader>
 
       <div className="space-y-6">
         <RichTextSection
@@ -302,121 +310,35 @@ export default function CharacterDetailPage() {
         />
 
         {/* Character Details */}
-        {editing ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Character Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label>Status</Label>
-                  <Select
-                    value={editStatus}
-                    onValueChange={(v) => v && setEditStatus(v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((o) => (
-                        <SelectItem key={o} value={o}>
-                          {o}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label>Species</Label>
-                  <Select
-                    value={editSpecies}
-                    onValueChange={(v) => v && setEditSpecies(v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select species" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SPECIES_OPTIONS.map((o) => (
-                        <SelectItem key={o} value={o}>
-                          {o}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label>Age</Label>
-                  <Input
-                    value={editAge}
-                    onChange={(e) => setEditAge(e.target.value)}
-                    placeholder="Age or age description"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Narrative Role</Label>
-                  <Select
-                    value={editRole}
-                    onValueChange={(v) => v && setEditRole(v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLE_OPTIONS.map((o) => (
-                        <SelectItem key={o} value={o}>
-                          {o}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          entity.character && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Character Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  {entity.character.status && (
-                    <div>
-                      <dt className="text-muted-foreground">Status</dt>
-                      <dd className="font-medium capitalize">
-                        {entity.character.status}
-                      </dd>
-                    </div>
-                  )}
-                  {entity.character.species && (
-                    <div>
-                      <dt className="text-muted-foreground">Species</dt>
-                      <dd className="font-medium capitalize">
-                        {entity.character.species}
-                      </dd>
-                    </div>
-                  )}
-                  {entity.character.age && (
-                    <div>
-                      <dt className="text-muted-foreground">Age</dt>
-                      <dd className="font-medium">{entity.character.age}</dd>
-                    </div>
-                  )}
-                  {entity.character.role && (
-                    <div>
-                      <dt className="text-muted-foreground">Narrative Role</dt>
-                      <dd className="font-medium capitalize">
-                        {entity.character.role}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </CardContent>
-            </Card>
-          )
-        )}
+        <EntityFieldsCard
+          title="Character Details"
+          fields={CHARACTER_FIELDS}
+          values={
+            editing
+              ? {
+                  status: editStatus,
+                  species: editSpecies,
+                  age: editAge,
+                  role: editRole,
+                }
+              : {
+                  status: entity.character?.status,
+                  species: entity.character?.species,
+                  age: entity.character?.age,
+                  role: entity.character?.role,
+                }
+          }
+          editing={editing}
+          onChange={(key, value) => {
+            const setters: Record<string, (v: string) => void> = {
+              status: setEditStatus,
+              species: setEditSpecies,
+              age: setEditAge,
+              role: setEditRole,
+            };
+            setters[key]?.(value);
+          }}
+        />
 
         <RichTextSection
           title="Voice Notes"
@@ -426,6 +348,15 @@ export default function CharacterDetailPage() {
           onEditChange={setEditVoiceNotes}
           rows={4}
           placeholder="Speech patterns, verbal tics, vocabulary level..."
+        />
+
+        <CustomFieldsSection
+          projectSlug={params.slug}
+          entityType="CHARACTER"
+          customFields={entity.character?.customFields ?? {}}
+          editing={editing}
+          editCustomFields={editCustomFields}
+          onEditCustomFieldsChange={setEditCustomFields}
         />
 
         <RichTextSection
